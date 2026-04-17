@@ -1,0 +1,43 @@
+@import "tailwindcss";
+
+/* Para habilitar el modo oscuro basado en clase en v4 */
+@variant dark (&:where(.dark, .dark *));
+
+@layer base {
+  html {
+    /* Esto tiñe el área que queda fuera del scroll elástico */
+    @apply bg-slate-50;
+    /* Ocultar scrollbar en Firefox */
+    scrollbar-width: none;
+  }
+  
+  html.dark {
+    @apply bg-slate-950;
+  }
+
+  body {
+    /* Aseguramos que el body ocupe todo el alto para evitar cortes */
+    min-height: 100vh;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    
+    /* Ocultar scrollbar en Chrome, Safari y Edge */
+    &::-webkit-scrollbar {
+      display: none;
+    }
+    
+    /* Reforzamos para Firefox en el body también */
+    scrollbar-width: none;
+    /* Ocultar scrollbar en IE y Edge antiguo */
+    -ms-overflow-style: none;
+  }
+}
+
+/* Estilos base para el cuerpo */
+body {
+  @apply transition-colors duration-500 ease-in-out bg-slate-50 text-slate-900;
+}
+
+.dark body {
+  @apply bg-slate-950 text-slate-50;
+}
