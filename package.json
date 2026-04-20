@@ -15,14 +15,18 @@
     "date-fns": "^4.1.0",
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.8.0",
+    "mapbox-gl": "^3.22.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "react-map-gl": "^8.1.1",
     "react-native-common-intents": "^0.3.0",
     "react-native-ios-utilities": "^5.2.0",
     "react-router-dom": "^7.14.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
+    "@types/geojson": "^7946.0.16",
+    "@types/mapbox-gl": "^3.4.1",
     "@types/node": "^24.12.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

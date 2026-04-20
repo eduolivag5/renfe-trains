@@ -7,7 +7,7 @@ const HomePage = () => {
     <motion.div 
       initial={{ opacity: 0 }} 
       animate={{ opacity: 1 }}
-      className="flex flex-col items-center justify-center max-w-6xl mx-auto px-6"
+      className="flex flex-col items-center justify-center max-w-6xl mx-auto"
     >
       {/* HERO: BUSCADOR CENTRALIZADO */}
       <section className="w-full text-center space-y-12">

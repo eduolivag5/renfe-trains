@@ -20,7 +20,7 @@ const Navbar: React.FC<NavbarProps> = () => {
 
   const navLinks: NavLink[] = [
     { name: 'Inicio', Icon: Home, href: '/' },
-    { name: 'Rutas', Icon: Map, href: '/rutas' },
+    { name: 'Mapa', Icon: Map, href: '/mapa' }, // Cambiado de "Rutas" a "Mapa"
     { name: 'Trenes', Icon: TrainFront, href: '/trenes' },
     { name: 'Ajustes', Icon: Settings, href: '/ajustes' },
   ];
@@ -85,7 +85,6 @@ const Navbar: React.FC<NavbarProps> = () => {
               );
             })}
 
-            {/* Icono de Ajustes solo en PC (Sustituye al Switch) */}
             <Link to="/ajustes">
               <motion.div 
                 whileTap={{ scale: 0.9 }}
