@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MapPin, Navigation2, Loader2, Calendar as CalendarIcon, ChevronRight, ArrowRightLeft, Search } from 'lucide-react';
+import { MapPin, Navigation2, Loader2, Calendar as CalendarIcon, ArrowRightLeft, Search } from 'lucide-react';
 import { format, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { estacionesService } from '../api/estacionesService';
@@ -113,12 +113,11 @@ const DesktopStationSearch = () => {
         {/* CONTENEDOR DE SWAP (Origen y Destino) */}
         <div className="flex-[2.4] flex relative divide-x divide-slate-100 dark:divide-white/5">
           
-          {/* CAMPO DINÁMICO: ORIGEN */}
+          {/* ORIGEN */}
           <motion.div 
             layout
             key={origin?.codigo || 'origin-empty'}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="flex-1 relative p-4 group hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors"
+            className="flex-1 relative p-4 transition-colors"
           >
             <label className="block text-[10px] font-extrabold text-slate-400 uppercase mb-1 tracking-wider">Origen</label>
             <div className="flex items-center gap-2">
@@ -134,25 +133,22 @@ const DesktopStationSearch = () => {
             </div>
           </motion.div>
 
-          {/* BOTÓN DE INTERCAMBIO - FIJO Y RECTO */}
+          {/* BOTÓN DE INTERCAMBIO */}
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-30 pointer-events-none">
             <motion.button 
-              // Quitamos 'layout' para que no intente animar su posición en el swap
-              whileHover={{ scale: 1.15 }}
-              whileTap={{ scale: 0.9 }} // Solo escala, sin rotación para que se mantenga recto
+              whileTap={{ scale: 0.9 }}
               onClick={swapStations}
-              className="pointer-events-auto p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-full shadow-lg text-slate-400 hover:text-blue-500 transition-all flex items-center justify-center"
+              className="pointer-events-auto p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-white/10 rounded-full shadow-lg text-slate-400 transition-all flex items-center justify-center"
             >
               <ArrowRightLeft size={16} />
             </motion.button>
           </div>
 
-          {/* CAMPO DINÁMICO: DESTINO */}
+          {/* DESTINO */}
           <motion.div 
             layout
             key={destination?.codigo || 'dest-empty'}
-            transition={{ type: "spring", stiffness: 300, damping: 30 }}
-            className="flex-1 relative p-4 group hover:bg-slate-50/50 dark:hover:bg-white/5 transition-colors"
+            className="flex-1 relative p-4 transition-colors"
           >
             <label className="block text-[10px] font-extrabold text-slate-400 uppercase mb-1 tracking-wider ml-4">Destino</label>
             <div className="flex items-center gap-2 ml-4">
@@ -172,7 +168,6 @@ const DesktopStationSearch = () => {
         {/* SECCIÓN FECHAS */}
         <div className="flex-[1.5] flex divide-x divide-slate-100 dark:divide-white/5 border-l border-slate-100 dark:border-white/5">
           <motion.div 
-            whileHover={{ backgroundColor: "rgba(0,0,0,0.02)" }}
             className="flex-1 p-4 cursor-pointer transition-colors" 
             onClick={() => {setActivePicker('departure'); setQuery({text:'', field:''})}}
           >
@@ -189,7 +184,7 @@ const DesktopStationSearch = () => {
               filter: tripType === 'one-way' ? 'grayscale(1)' : 'grayscale(0)',
               pointerEvents: tripType === 'one-way' ? 'none' : 'auto'
             }}
-            className="flex-1 p-4 cursor-pointer hover:bg-slate-50/50 transition-all"
+            className="flex-1 p-4 cursor-pointer transition-all"
             onClick={() => tripType === 'round' && setActivePicker('return')}
           >
             <label className="block text-[10px] font-extrabold text-slate-400 uppercase mb-1 tracking-wider">Regreso</label>
@@ -202,14 +197,13 @@ const DesktopStationSearch = () => {
           </motion.div>
         </div>
 
-        {/* BOTÓN BUSCAR */}
-        <div className="p-2 flex items-center justify-center bg-slate-50 dark:bg-white/5">
+        {/* BOTÓN BUSCAR (LUPA) */}
+        <div className="p-3 flex items-center justify-center bg-slate-50 dark:bg-white/5">
           <motion.button 
-            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-            className="h-full px-8 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm uppercase tracking-widest shadow-lg shadow-blue-500/30 transition-all flex items-center gap-2 group"
+            whileTap={{ scale: 0.95 }}
+            className="h-full w-16 bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-500/30 transition-all flex items-center justify-center"
           >
-            <span>Buscar</span>
-            <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
+            <Search size={22} strokeWidth={2.5} />
           </motion.button>
         </div>
       </motion.div>
@@ -260,7 +254,7 @@ const ResultsList = ({ loading, results, onSelect }: any) => (
         <button
           key={estacion.codigo}
           onMouseDown={() => onSelect(estacion)}
-          className="w-full flex items-center justify-between px-5 py-3.5 hover:bg-blue-50 dark:hover:bg-blue-500/10 text-left transition-colors border-b border-slate-50 dark:border-white/5 last:border-none"
+          className="w-full flex items-center justify-between px-5 py-3.5 text-left transition-colors border-b border-slate-50 dark:border-white/5 last:border-none"
         >
           <div className="flex items-center gap-4">
             <div className="p-2 bg-slate-100 dark:bg-white/5 rounded-lg text-slate-400">
