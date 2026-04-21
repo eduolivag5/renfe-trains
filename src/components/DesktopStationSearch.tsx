@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, Navigation2, Loader2, Calendar as CalendarIcon, ArrowRightLeft, Search } from 'lucide-react';
 import { format, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useNavigate } from 'react-router-dom';
 import { estacionesService } from '../api/estacionesService';
 import CustomCalendar from '../ui/CustomCalendar';
 
@@ -12,17 +13,45 @@ interface Estacion {
 }
 
 const DesktopStationSearch = () => {
+  const navigate = useNavigate();
+  const searchRef = useRef<HTMLDivElement>(null);
+
+  // Estados de búsqueda
   const [origin, setOrigin] = useState<Estacion | null>(null);
   const [destination, setDestination] = useState<Estacion | null>(null);
   const [departureDate, setDepartureDate] = useState<Date>(startOfDay(new Date()));
   const [returnDate, setReturnDate] = useState<Date | null>(null);
   const [tripType, setTripType] = useState<'round' | 'one-way'>('round');
+  
+  // Estados de UI
   const [activePicker, setActivePicker] = useState<'departure' | 'return' | null>(null);
   const [query, setQuery] = useState({ text: '', field: '' as 'origin' | 'destination' | '' });
   const [results, setResults] = useState<Estacion[]>([]);
   const [loading, setLoading] = useState(false);
-  
-  const searchRef = useRef<HTMLDivElement>(null);
+
+  // Lógica de búsqueda y navegación
+  const handleSearch = () => {
+    if (!origin || !destination) {
+      alert("Por favor, selecciona origen y destino");
+      return;
+    }
+
+    const formattedDate = format(departureDate, 'yyyy-MM-dd');
+    
+    // Construimos los parámetros de búsqueda
+    const params = new URLSearchParams({
+      origin: origin.codigo,
+      destination: destination.codigo,
+      date: formattedDate
+    });
+
+    // Si es ida y vuelta, podríamos añadir el parámetro returnDate si tu API lo soporta
+    if (tripType === 'round' && returnDate) {
+      params.append('returnDate', format(returnDate, 'yyyy-MM-dd'));
+    }
+
+    navigate(`/trenes?${params.toString()}`);
+  };
 
   const handleDateSelection = useCallback((selectedDate: Date) => {
     const normalizedSelected = startOfDay(selectedDate);
@@ -39,6 +68,7 @@ const DesktopStationSearch = () => {
     setActivePicker(null);
   }, [activePicker, departureDate, returnDate]);
 
+  // Debounce para búsqueda de estaciones
   useEffect(() => {
     const timer = setTimeout(async () => {
       if (query.text.length >= 3) {
@@ -46,13 +76,19 @@ const DesktopStationSearch = () => {
         try {
           const data = await estacionesService.search(query.text);
           setResults(data);
-        } catch { setResults([]); }
-        finally { setLoading(false); }
-      } else { setResults([]); }
+        } catch { 
+          setResults([]); 
+        } finally { 
+          setLoading(false); 
+        }
+      } else { 
+        setResults([]); 
+      }
     }, 300);
     return () => clearTimeout(timer);
   }, [query.text]);
 
+  // Cerrar menús al hacer click fuera
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
@@ -110,15 +146,11 @@ const DesktopStationSearch = () => {
       {/* 2. BOX DE BÚSQUEDA */}
       <motion.div layout className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl flex items-stretch overflow-visible">
         
-        {/* CONTENEDOR DE SWAP (Origen y Destino) */}
+        {/* CONTENEDOR ORIGEN Y DESTINO */}
         <div className="flex-[2.4] flex relative divide-x divide-slate-100 dark:divide-white/5">
           
           {/* ORIGEN */}
-          <motion.div 
-            layout
-            key={origin?.codigo || 'origin-empty'}
-            className="flex-1 relative p-4 transition-colors"
-          >
+          <motion.div layout className="flex-1 relative p-4 transition-colors">
             <label className="block text-[10px] font-extrabold text-slate-400 uppercase mb-1 tracking-wider">Origen</label>
             <div className="flex items-center gap-2">
               <MapPin size={18} className="text-blue-500 shrink-0" />
@@ -145,11 +177,7 @@ const DesktopStationSearch = () => {
           </div>
 
           {/* DESTINO */}
-          <motion.div 
-            layout
-            key={destination?.codigo || 'dest-empty'}
-            className="flex-1 relative p-4 transition-colors"
-          >
+          <motion.div layout className="flex-1 relative p-4 transition-colors">
             <label className="block text-[10px] font-extrabold text-slate-400 uppercase mb-1 tracking-wider ml-4">Destino</label>
             <div className="flex items-center gap-2 ml-4">
               <Navigation2 size={18} className="text-blue-500 shrink-0" />
@@ -168,7 +196,7 @@ const DesktopStationSearch = () => {
         {/* SECCIÓN FECHAS */}
         <div className="flex-[1.5] flex divide-x divide-slate-100 dark:divide-white/5 border-l border-slate-100 dark:border-white/5">
           <motion.div 
-            className="flex-1 p-4 cursor-pointer transition-colors" 
+            className="flex-1 p-4 cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-white/5" 
             onClick={() => {setActivePicker('departure'); setQuery({text:'', field:''})}}
           >
             <label className="block text-[10px] font-extrabold text-slate-400 uppercase mb-1 tracking-wider">Salida</label>
@@ -184,7 +212,7 @@ const DesktopStationSearch = () => {
               filter: tripType === 'one-way' ? 'grayscale(1)' : 'grayscale(0)',
               pointerEvents: tripType === 'one-way' ? 'none' : 'auto'
             }}
-            className="flex-1 p-4 cursor-pointer transition-all"
+            className="flex-1 p-4 cursor-pointer transition-all hover:bg-slate-50 dark:hover:bg-white/5"
             onClick={() => tripType === 'round' && setActivePicker('return')}
           >
             <label className="block text-[10px] font-extrabold text-slate-400 uppercase mb-1 tracking-wider">Regreso</label>
@@ -198,10 +226,12 @@ const DesktopStationSearch = () => {
         </div>
 
         {/* BOTÓN BUSCAR (LUPA) */}
-        <div className="p-3 flex items-center justify-center bg-slate-50 dark:bg-white/5">
+        <div className="p-3 flex items-center justify-center bg-slate-50 dark:bg-white/5 border-l border-slate-100 dark:border-white/5 rounded-r-2xl">
           <motion.button 
+            whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="h-full w-16 bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-500/30 transition-all flex items-center justify-center"
+            onClick={handleSearch}
+            className="h-full w-16 bg-blue-600 text-white rounded-xl shadow-lg shadow-blue-500/30 transition-all flex items-center justify-center hover:bg-blue-700"
           >
             <Search size={22} strokeWidth={2.5} />
           </motion.button>
@@ -212,19 +242,23 @@ const DesktopStationSearch = () => {
       <AnimatePresence>
         {query.field && (
           <motion.div 
-            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 10 }}
-            className={`absolute ${query.field === 'origin' ? 'left-4' : 'left-1/4'} w-[400px] top-full mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl shadow-2xl z-[60] overflow-hidden`}
+            initial={{ opacity: 0, y: 10 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            exit={{ opacity: 0, y: 10 }}
+            className={`absolute ${query.field === 'origin' ? 'left-4' : 'left-1/3'} w-[400px] top-full mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl shadow-2xl z-[60] overflow-hidden`}
           >
             <ResultsList loading={loading} results={results} onSelect={selectStation} />
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* CALENDARIO */}
+      {/* CALENDARIO POPUP */}
       <AnimatePresence>
         {activePicker && (
           <motion.div 
-            initial={{ opacity: 0, scale: 0.95, y: 10 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 10 }}
+            initial={{ opacity: 0, scale: 0.95, y: 10 }} 
+            animate={{ opacity: 1, scale: 1, y: 0 }} 
+            exit={{ opacity: 0, scale: 0.95, y: 10 }}
             className="absolute top-full right-0 mt-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl z-[70] p-5 w-[400px] origin-top-right"
           >
             <p className="text-[10px] font-black text-slate-400 uppercase mb-4 tracking-widest text-center">
@@ -242,6 +276,7 @@ const DesktopStationSearch = () => {
   );
 };
 
+// Componente auxiliar para la lista de resultados
 const ResultsList = ({ loading, results, onSelect }: any) => (
   <div className="max-h-[350px] overflow-y-auto py-2 overscroll-contain">
     {loading ? (
@@ -254,7 +289,7 @@ const ResultsList = ({ loading, results, onSelect }: any) => (
         <button
           key={estacion.codigo}
           onMouseDown={() => onSelect(estacion)}
-          className="w-full flex items-center justify-between px-5 py-3.5 text-left transition-colors border-b border-slate-50 dark:border-white/5 last:border-none"
+          className="w-full flex items-center justify-between px-5 py-3.5 text-left transition-colors hover:bg-slate-50 dark:hover:bg-white/5 border-b border-slate-50 dark:border-white/5 last:border-none"
         >
           <div className="flex items-center gap-4">
             <div className="p-2 bg-slate-100 dark:bg-white/5 rounded-lg text-slate-400">

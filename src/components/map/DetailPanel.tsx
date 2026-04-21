@@ -1,7 +1,6 @@
-// components/map/DetailPanel.tsx
 import React, { useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Navigation2, ChevronDown, ChevronUp, Loader2, AlertCircle, Radio } from 'lucide-react';
+import { X, Navigation2, ChevronDown, ChevronUp, Loader2, AlertCircle, Radio, Check } from 'lucide-react';
 import { trainsService, type TrainMap, type TrainDetail } from '../../api/trainsService';
 import { COLORS } from './MapConstants';
 
@@ -39,19 +38,24 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ train, onClose, isDarkMode })
 
   return (
     <motion.div
-      initial={{ y: '110%' }}
+      // CORRECCIÓN: Usamos un valor fijo alto o combinamos porcentajes para asegurar 
+      // que baje más allá de los 96px (bottom-24) de la Navbar.
+      initial={{ y: '150%' }} 
       animate={{ y: 0 }}
-      exit={{ y: '110%' }}
+      exit={{ y: '150%' }}
       transition={{ type: 'spring', damping: 30, stiffness: 320, mass: 0.85 }}
-      className="absolute bottom-0 left-0 right-0 z-50 px-3 pointer-events-none"
-      style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom))' }}
+      // Se mantiene el bottom-24 en móvil para que repose sobre la Navbar
+      className="absolute bottom-24 md:bottom-6 left-0 right-0 z-50 px-3 pointer-events-none"
     >
       <div className={`
         mx-auto max-w-lg rounded-[26px] pointer-events-auto overflow-hidden
         shadow-[0_-8px_48px_rgba(0,0,0,0.28)] backdrop-blur-2xl
         ${isDarkMode ? 'bg-[#0d0d1f]/96 border border-violet-500/15' : 'bg-white/97 border border-indigo-50'}
       `}>
+        {/* Línea de acento superior */}
         <div className="h-[3px]" style={{ background: `linear-gradient(90deg, ${accent}, ${accent}88, transparent)` }} />
+        
+        {/* Indicador visual de arrastre */}
         <div className="flex justify-center pt-2.5">
           <div className={`w-9 h-[3px] rounded-full ${isDarkMode ? 'bg-violet-500/25' : 'bg-indigo-200/70'}`} />
         </div>
@@ -93,15 +97,31 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ train, onClose, isDarkMode })
               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
                 <div className={`rounded-xl overflow-hidden border ${isDarkMode ? 'border-violet-500/10' : 'border-indigo-50'}`}>
                   {detail.itinerary.slice(0, 9).map((stop, i) => (
-                    <div key={i} className={`flex items-center gap-3 px-3.5 py-[9px] text-[12px] ${stop.isPassed ? 'opacity-35' : ''} ${isDarkMode ? (i % 2 === 0 ? 'bg-white/[0.03]' : '') : (i % 2 === 0 ? 'bg-indigo-50/60' : 'bg-white')}`}>
-                      <div className="flex flex-col items-center self-stretch py-px gap-[2px] shrink-0">
-                        <div className="w-px flex-1" style={{ background: stop.isPassed ? '#94a3b830' : accent + '35' }} />
-                        <div className="w-[5px] h-[5px] rounded-full shrink-0" style={{ background: stop.isPassed ? '#94a3b8' : accent }} />
-                        <div className="w-px flex-1" style={{ background: stop.isPassed ? '#94a3b830' : accent + '35' }} />
+                    <div key={i} className={`flex items-center gap-3 px-3.5 py-[9px] text-[12px] ${isDarkMode ? (i % 2 === 0 ? 'bg-white/[0.03]' : '') : (i % 2 === 0 ? 'bg-indigo-50/60' : 'bg-white')}`}>
+  
+                      {/* Eje visual */}
+                      <div className="flex flex-col items-center self-stretch py-px gap-[2px] shrink-0 w-5">
+                        <div className="w-px flex-1" style={{ background: stop.isPassed ? accent + '40' : accent + '20' }} />
+                        
+                        {stop.isPassed ? (
+                          /* CHECK BLANCO CIRCULAR CON ICONO NEGRO */
+                          <div className="flex items-center justify-center w-4 h-4 rounded-full bg-white shadow-sm shrink-0">
+                            <Check size={10} strokeWidth={4} className="text-black" />
+                          </div>
+                        ) : (
+                          /* PUNTO DE PARADA PENDIENTE */
+                          <div className="flex items-center justify-center w-4 h-4">
+                            <div className="w-[6px] h-[6px] rounded-full shrink-0" style={{ background: accent }} />
+                          </div>
+                        )}
+                        
+                        <div className="w-px flex-1" style={{ background: stop.isPassed ? accent + '40' : accent + '20' }} />
                       </div>
-                      <span className={`flex-1 font-medium truncate ${isDarkMode ? 'text-violet-100' : 'text-indigo-900'}`}>
+
+                      <span className={`flex-1 font-medium truncate ${stop.isPassed ? (isDarkMode ? 'text-slate-400' : 'text-slate-500') : (isDarkMode ? 'text-violet-100' : 'text-indigo-900')}`}>
                         {stop.stopName}
                       </span>
+                      
                       <span className={`font-mono tabular-nums shrink-0 text-[11px] ${isDarkMode ? 'text-violet-400' : 'text-indigo-300'}`}>
                         {stop.actualArrival || stop.scheduledArrival}
                       </span>

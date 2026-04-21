@@ -9,18 +9,68 @@
     width: 100%;
     margin: 0;
     padding: 0;
+
+    /* --- BLOQUEAR SELECCIÓN DE TEXTO --- */
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
   }
 
   body {
-    /* Quitamos los paddings de safe-area de aquí para que el mapa respire */
     min-height: 100dvh; 
     
-    &::-webkit-scrollbar { display: none; }
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+    /* Firefox: scrollbar fina y azul */
+    scrollbar-width: thin;
+    scrollbar-color: #3b82f6 transparent;
+  }
+
+  /* --- SCROLLBAR ULTRA FINA MODERNA (Webkit: Chrome, Safari, Edge) --- */
+  ::-webkit-scrollbar {
+    width: 4px; /* Ancho ultra-fino */
+    height: 4px; /* Para scroll horizontal */
+  }
+
+  /* ELIMINACIÓN TOTAL DE FLECHAS (Botones) */
+  ::-webkit-scrollbar-button,
+  ::-webkit-scrollbar-button:start,
+  ::-webkit-scrollbar-button:end {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+  }
+
+  /* Esquina donde se cruzan dos barras de scroll */
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  /* Carril de la barra */
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  /* La barra que se desliza */
+  ::-webkit-scrollbar-thumb {
+    @apply bg-blue-500/40 rounded-full transition-colors;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-blue-600/80;
+  }
+
+  /* Ajustes para modo oscuro */
+  .dark ::-webkit-scrollbar-thumb {
+    @apply bg-blue-400/30;
+  }
+
+  .dark ::-webkit-scrollbar-thumb:hover {
+    @apply bg-blue-500/60;
   }
 }
 
+/* --- ESTILOS GENERALES DEL BODY --- */
 body {
   @apply transition-colors duration-500 ease-in-out bg-slate-50 text-slate-900;
 }

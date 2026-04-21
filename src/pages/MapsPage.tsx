@@ -43,7 +43,7 @@ const MapsPage: React.FC<{ isDarkMode: boolean }> = ({ isDarkMode }) => {
     try {
       const data = await trainsService.getLiveMap();
       setTrenes(data);
-      setLastUpdate(new Date()); // <--- Guardamos la hora actual al recibir datos
+      setLastUpdate(new Date());
     } catch (e: any) {
       if (e.name !== 'AbortError') console.error('Error fetching trains:', e);
     }

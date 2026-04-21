@@ -33,7 +33,7 @@ const Navbar: React.FC<NavbarProps> = () => {
       <div className="fixed top-0 left-0 right-0 z-50 hidden md:flex justify-center p-4">
         <nav className="flex items-center bg-white/40 dark:bg-slate-900/40 backdrop-blur-xl border border-white/20 dark:border-white/5 shadow-2xl rounded-2xl overflow-hidden">
           
-          {/* Logo con fondo Azul Oscuro */}
+          {/* Logo */}
           <Link 
             to="/" 
             className="bg-[#002147] px-5 py-3 flex items-center justify-center border-r border-white/10 hover:bg-[#003366] transition-colors"
@@ -47,17 +47,9 @@ const Navbar: React.FC<NavbarProps> = () => {
               const isActive = location.pathname === link.href;
               return (
                 <Link key={link.name} to={link.href} className="relative px-4 py-2 group">
-                  <div className={`relative z-10 flex items-center gap-2 transition-colors duration-300
-                    ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white'}
-                  `}>
+                  <div className="relative z-10 flex items-center gap-2">
                     <link.Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
                     <span className="text-sm font-bold tracking-tight">{link.name}</span>
-                    
-                    {link.name === 'Trenes' && (
-                      <span className="bg-green-500 text-[10px] text-white font-black px-1.5 py-0.5 rounded-full shadow-sm">
-                        3
-                      </span>
-                    )}
                   </div>
 
                   {isActive && (
@@ -74,9 +66,10 @@ const Navbar: React.FC<NavbarProps> = () => {
         </nav>
       </div>
 
-      {/* --- MOBILE NAVBAR (RESTAURADA ORIGINAL SIN CAMBIOS) --- */}
+      {/* --- MOBILE NAVBAR --- */}
       <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center px-6 pb-[calc(env(safe-area-inset-bottom)+1rem)] md:hidden">
         <div className="relative flex items-center w-full max-w-[400px] h-[76px] bg-slate-200/70 dark:bg-slate-900/80 backdrop-blur-[40px] border border-white/20 dark:border-white/5 shadow-[0_-15px_40px_rgba(0,0,0,0.15)] rounded-[38px] px-2">
+          
           <div className="absolute inset-0 px-2 flex items-center pointer-events-none">
             <motion.div
               className="h-[56px] bg-white/60 dark:bg-white/10 rounded-[30px] shadow-sm"
@@ -99,12 +92,7 @@ const Navbar: React.FC<NavbarProps> = () => {
                     ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-500 dark:text-slate-400'}
                   `}
                 >
-                  <div className="relative">
-                    <link.Icon size={22} strokeWidth={2.5} className="block" />
-                    {link.name === 'Trenes' && (
-                      <span className="absolute -top-1.5 -right-3.5 bg-green-500 text-[10px] text-white font-black px-1.5 py-0.5 rounded-full shadow-sm">3</span>
-                    )}
-                  </div>
+                  <link.Icon size={22} strokeWidth={2.5} />
                   <span className={`text-[10px] font-bold tracking-tight uppercase ${isActive ? 'opacity-100' : 'opacity-70'}`}>
                     {link.name}
                   </span>
