@@ -1,8 +1,7 @@
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Map as MapIcon, Radio, ChevronRight } from 'lucide-react';
-import DesktopStationSearch from '../components/DesktopStationSearch';
-import MobileStationSearch from '../components/MobileStationSearch';
+import StationSearch from '../components/station-search/StationSearch';
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -32,13 +31,8 @@ const HomePage = () => {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="w-full"
         >
-          <div className="hidden lg:block">
-            <DesktopStationSearch />
-          </div>
-
-          <div className="block lg:hidden">
-            <MobileStationSearch />
-          </div>
+          {/* Se renderiza siempre este componente independientemente del dispositivo */}
+          <StationSearch />
         </motion.div>
       </section>
 
