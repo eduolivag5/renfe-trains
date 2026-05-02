@@ -38,13 +38,10 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ train, onClose, isDarkMode })
 
   return (
     <motion.div
-      // CORRECCIÓN: Usamos un valor fijo alto o combinamos porcentajes para asegurar 
-      // que baje más allá de los 96px (bottom-24) de la Navbar.
       initial={{ y: '150%' }} 
       animate={{ y: 0 }}
       exit={{ y: '150%' }}
       transition={{ type: 'spring', damping: 30, stiffness: 320, mass: 0.85 }}
-      // Se mantiene el bottom-24 en móvil para que repose sobre la Navbar
       className="absolute bottom-24 md:bottom-6 left-0 right-0 z-50 px-3 pointer-events-none"
     >
       <div className={`

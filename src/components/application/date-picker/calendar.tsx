@@ -13,9 +13,9 @@ import {
     Heading as AriaHeading,
     useSlottedContext,
 } from "react-aria-components";
-import { Button } from "@/components/base/buttons/button";
-import { InputDateBase } from "@/components/base/input/input-date";
-import { cx } from "@/utils/cx";
+import { Button } from "../../base/buttons/button";
+import { InputDateBase } from "../../base/input/input-date";
+import { cx } from "../../../utils/cx";
 import { CalendarCell } from "./cell";
 
 export const CalendarContextProvider = ({ children }: PropsWithChildren) => {
