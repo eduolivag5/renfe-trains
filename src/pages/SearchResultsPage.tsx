@@ -34,7 +34,6 @@ const SearchResultsPage = () => {
     if (!hasParams) return;
     
     setLoading(true);
-    // No vaciamos 'trains' aquí para evitar que la página salte al top
     
     trainsService.searchTrains(origin, destination, date)
       .then((newTrains) => {
@@ -125,10 +124,8 @@ const SearchResultsPage = () => {
           }`}
         >
           {isInitialLoading ? (
-            // Solo se muestra la primera vez que entramos
             Array.from({ length: 6 }).map((_, i) => <TrainSkeleton key={i} />)
           ) : processedTrains.length > 0 ? (
-            // Muestra los trenes (los viejos se mantienen hasta que llegan los nuevos)
             processedTrains.map((train, idx) => (
               <TrainCard 
                 key={train.tripId}
@@ -139,7 +136,6 @@ const SearchResultsPage = () => {
               />
             ))
           ) : (
-            // Estado vacío (Solo si no está cargando y no hay resultados)
             !loading && (
               <div className="flex flex-col items-center justify-center py-32 text-center">
                 <div className="w-16 h-16 bg-slate-100 dark:bg-white/5 rounded-full flex items-center justify-center mb-4">

@@ -124,14 +124,13 @@ const MapsPage: React.FC<{ isDarkMode: boolean }> = ({ isDarkMode }) => {
       {trenes.length > 0 && (
         <LiveCounter 
           count={trenes.length} 
-          lastUpdate={lastUpdate} // <--- Pasamos la prop
-          isDarkMode={isDarkMode} 
+          lastUpdate={lastUpdate}
         />
       )}
 
       <AnimatePresence>
         {selectedTren && (
-          <DetailPanel key={selectedTren.tripId} train={selectedTren} onClose={() => setSelectedTren(null)} isDarkMode={isDarkMode} />
+          <DetailPanel key={selectedTren.tripId} train={selectedTren} onClose={() => setSelectedTren(null)} />
         )}
       </AnimatePresence>
     </div>
