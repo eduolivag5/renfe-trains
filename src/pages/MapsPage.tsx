@@ -7,7 +7,7 @@ import 'mapbox-gl/dist/mapbox-gl.css';
 import { type TrainMap, trainsService } from '../api/trainsService';
 import DetailPanel from '../components/map/DetailPanel';
 import { LiveCounter } from '../components/map/LiveCounter';
-import { clusterHaloStyle, clusterLayerStyle, clusterCountStyle, getPointStyle } from '../components/map/MapConstants';
+import { getPointStyle } from '../components/map/MapConstants'; // Solo importamos lo necesario
 import { registerIcons } from '../components/map/MapIcons';
 
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN;
@@ -55,14 +55,13 @@ const MapsPage: React.FC<{ isDarkMode: boolean }> = ({ isDarkMode }) => {
     return () => { clearInterval(id); abortRef.current?.abort(); };
   }, [fetchTrenes]);
 
-  const onMapClick = useCallback((event: MapMouseEvent) => { // <--- Tipo actualizado
+  const onMapClick = useCallback((event: MapMouseEvent) => {
     const map = mapRef.current?.getMap();
     if (!map) return;
 
-    // El resto del código sigue igual, ya que MapMouseEvent 
-    // contiene las mismas propiedades (point, lngLat, etc.)
+    // Solo buscamos en la capa de puntos ya que no hay clústers
     const features = map.queryRenderedFeatures(event.point, {
-      layers: ['clusters', 'unclustered-point'],
+      layers: ['unclustered-point'],
     });
 
     const feature = features?.[0];
@@ -71,21 +70,8 @@ const MapsPage: React.FC<{ isDarkMode: boolean }> = ({ isDarkMode }) => {
       return; 
     }
 
-    if (feature.layer?.id === 'clusters') {
-      const clusterId = feature.properties?.cluster_id;
-      const source = map.getSource('trains-data') as mapboxgl.GeoJSONSource;
-      source.getClusterExpansionZoom(clusterId, (err, zoom) => {
-        if (err || zoom == null) return;
-        map.easeTo({ 
-          center: (feature.geometry as any).coordinates, 
-          zoom: Math.min(zoom, 14), 
-          duration: 350 
-        });
-      });
-      setSelectedTren(null);
-    } else {
-      setSelectedTren(feature.properties as TrainMap);
-    }
+    // Al desactivar clústeres, todas las features son trenes individuales
+    setSelectedTren(feature.properties as TrainMap);
   }, []);
 
   const onMapLoad = useCallback((e: any) => {
@@ -104,7 +90,7 @@ const MapsPage: React.FC<{ isDarkMode: boolean }> = ({ isDarkMode }) => {
         reuseMaps
         onLoad={onMapLoad}
         onClick={onMapClick}
-        interactiveLayerIds={['clusters', 'unclustered-point']}
+        interactiveLayerIds={['unclustered-point']} // Solo la capa de puntos
         initialViewState={INITIAL_VIEW}
         mapStyle={isDarkMode ? MAP_STYLE.dark : MAP_STYLE.light}
         mapboxAccessToken={MAPBOX_TOKEN}
@@ -112,10 +98,13 @@ const MapsPage: React.FC<{ isDarkMode: boolean }> = ({ isDarkMode }) => {
         attributionControl={false}
       >
         {mapLoaded && iconsReady && (
-          <Source id="trains-data" type="geojson" data={geojsonData} cluster={true} clusterMaxZoom={11} clusterRadius={52}>
-            <Layer {...clusterHaloStyle} />
-            <Layer {...clusterLayerStyle} />
-            <Layer {...clusterCountStyle} />
+          <Source 
+            id="trains-data" 
+            type="geojson" 
+            data={geojsonData} 
+            cluster={false}
+          >
+            {/* Solo renderizamos la capa de puntos individuales */}
             <Layer {...getPointStyle(isDarkMode)} />
           </Source>
         )}
@@ -130,7 +119,11 @@ const MapsPage: React.FC<{ isDarkMode: boolean }> = ({ isDarkMode }) => {
 
       <AnimatePresence>
         {selectedTren && (
-          <DetailPanel key={selectedTren.tripId} train={selectedTren} onClose={() => setSelectedTren(null)} />
+          <DetailPanel 
+            key={selectedTren.tripId} 
+            train={selectedTren} 
+            onClose={() => setSelectedTren(null)} 
+          />
         )}
       </AnimatePresence>
     </div>

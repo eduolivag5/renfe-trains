@@ -24,7 +24,7 @@ export const DateTrigger = ({ label, date, active, disabled, onClick }: {
   label: string; date: string; active: boolean; disabled?: boolean; onClick: () => void;
 }) => (
   <motion.button animate={{ opacity: disabled ? 0.35 : 1 }} disabled={disabled} onClick={onClick}
-    className="flex-1 flex items-center gap-2 px-4 py-3 text-left transition-colors hover:bg-slate-50 dark:hover:bg-white/5 active:bg-slate-50">
+    className="flex-1 flex items-center gap-2 px-4 py-3 text-left transition-colors">
     <CalendarIcon size={14} className={`shrink-0 ${active ? 'text-blue-500' : 'text-slate-300 dark:text-slate-600'}`} />
     <span>
       <span className="block text-[9.5px] font-semibold uppercase tracking-[0.06em] text-slate-400 dark:text-slate-500">{label}</span>

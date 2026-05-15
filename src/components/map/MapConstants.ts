@@ -1,71 +1,48 @@
 // components/map/MapConstants.ts
+
 export const COLORS = {
-  cercanias: '#6d28d9',
-  other: '#1e3a8a',
-  clusterSm: '#3b82f6',
-  clusterMd: '#6d28d9',
-  clusterLg: '#1e1b4b',
+  // Colores por categoría de tren
+  cercanias: '#ef2c30',      // Rojo Cercanías
+  rodalies: '#f47216',       // Naranja Rodalies
+  altaVelocidad: '#851765',  // Turquesa AVE/AVLO
+  mediaDistancia: '#808080', // Naranja oscuro MD
+  otros: '#1e3a8a',          // Azul oscuro
 } as const;
 
-export const clusterHaloStyle: any = {
-  id: 'clusters-halo',
-  type: 'circle',
-  source: 'trains-data',
-  filter: ['has', 'point_count'],
-  paint: {
-    'circle-color': 'transparent',
-    'circle-radius': ['step', ['get', 'point_count'], 28, 15, 38, 60, 48],
-    'circle-stroke-width': 1.5,
-    'circle-stroke-color': [
-      'step', ['get', 'point_count'],
-      'rgba(59,130,246,0.3)', 15,
-      'rgba(109,40,217,0.3)', 60,
-      'rgba(30,27,75,0.4)',
-    ],
-  },
-};
-
-export const clusterLayerStyle: any = {
-  id: 'clusters',
-  type: 'circle',
-  source: 'trains-data',
-  filter: ['has', 'point_count'],
-  paint: {
-    'circle-color': [
-      'step', ['get', 'point_count'],
-      COLORS.clusterSm, 15,
-      COLORS.clusterMd, 60,
-      COLORS.clusterLg,
-    ],
-    'circle-radius': ['step', ['get', 'point_count'], 20, 15, 28, 60, 36],
-    'circle-opacity': 0.93,
-    'circle-stroke-width': 2,
-    'circle-stroke-color': 'rgba(255,255,255,0.18)',
-  },
-};
-
-export const clusterCountStyle: any = {
-  id: 'cluster-count',
-  type: 'symbol',
-  source: 'trains-data',
-  filter: ['has', 'point_count'],
-  layout: {
-    'text-field': '{point_count_abbreviated}',
-    'text-font': ['DIN Offc Pro Bold', 'Arial Unicode MS Bold'],
-    'text-size': 13,
-  },
-  paint: { 'text-color': '#ffffff' },
-};
-
+/**
+ * Define el estilo de los puntos individuales de los trenes.
+ * Agrupa los 'short_name' del GTFS en categorías visuales (iconos).
+ */
 export const getPointStyle = (isDarkMode: boolean): any => ({
   id: 'unclustered-point',
   type: 'symbol',
   source: 'trains-data',
-  filter: ['!', ['has', 'point_count']],
   layout: {
-    'icon-image': ['match', ['get', 'tipo'], 'CERCANIAS', 'train-icon-cercanias', 'train-icon-other'],
+    'icon-image': [
+      'match',
+      ['get', 'tipo'],
+      // GRUPO: CERCANÍAS
+      ['C1', 'C1a', 'C2', 'C3', 'C4', 'C4a', 'C4A', 'C4b', 'C5', 'C5a', 'C6', 'C7', 'C8', 'C8a', 'C8b', 'C9', 'C10'], 
+      'train-icon-cercanias',
+
+      // GRUPO: RODALIES
+      ['R1', 'R2', 'R2N', 'R2S', 'R3', 'R3a', 'R4', 'R7', 'R8', 'R11', 'R13', 'R14', 'R15', 'R16', 'R17', 'RG1', 'RL3', 'RL4', 'RT1', 'RT2', 'T1'], 
+      'train-icon-rodalies',
+
+      // GRUPO: ALTA VELOCIDAD
+      ['AVE', 'AVE INT', 'AVLO', 'ALVIA', 'AVANT', 'AVANT EXP', 'EUROMED'], 
+      'train-icon-ave',
+
+      // GRUPO: MEDIA DISTANCIA / REGIONAL
+      ['MD', 'REGIONAL', 'REG.EXP.', 'PROXIMDAD', 'Intercity', 'TRENCELTA'], 
+      'train-icon-md',
+
+      // DEFAULT (Incluye BUS y cualquier otro)
+      'train-icon-other'
+    ],
     'icon-size': ['interpolate', ['linear'], ['zoom'], 8, 0.55, 12, 0.8, 16, 1.1],
     'icon-allow-overlap': true,
+    'icon-ignore-placement': true,
     'icon-anchor': 'center',
     'text-field': ['get', 'label'],
     'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
@@ -78,6 +55,6 @@ export const getPointStyle = (isDarkMode: boolean): any => ({
     'text-color': isDarkMode ? '#c4b5fd' : '#1e1b4b',
     'text-halo-color': isDarkMode ? 'rgba(2,6,23,0.9)' : 'rgba(255,255,255,0.92)',
     'text-halo-width': 1.5,
-    'icon-opacity': ['interpolate', ['linear'], ['zoom'], 5, 0, 7, 1],
+    'icon-opacity': 1,
   },
 });

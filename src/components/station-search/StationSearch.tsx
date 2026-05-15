@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, memo } from 'react';
 import { motion, AnimatePresence, LayoutGroup } from 'framer-motion';
-import { ArrowUpDown, Search, X } from 'lucide-react'; // Cambiado a ArrowUpDown
+import { ArrowUpDown, Search, X } from 'lucide-react';
 import { format, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
@@ -20,12 +20,10 @@ const StationSearch = () => {
   const navigate = useNavigate();
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Estados de búsqueda
   const [origin, setOrigin] = useState<Estacion | null>(null);
   const [destination, setDestination] = useState<Estacion | null>(null);
   const [departureDate, setDepartureDate] = useState<Date>(startOfDay(new Date()));
   
-  // Estados de animación y UI
   const [rotation, setRotation] = useState(0);
   const [isSwapped, setIsSwapped] = useState(false);
   const [activeField, setActiveField] = useState<ActiveField>(null);
@@ -34,7 +32,6 @@ const StationSearch = () => {
   const [results, setResults] = useState<Estacion[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // Búsqueda de estaciones
   useEffect(() => {
     if (query.length < 3) { setResults([]); return; }
     const timer = setTimeout(async () => {
@@ -46,7 +43,6 @@ const StationSearch = () => {
     return () => clearTimeout(timer);
   }, [query]);
 
-  // Cerrar paneles al hacer click fuera
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -75,11 +71,9 @@ const StationSearch = () => {
   const swapStations = (e: React.MouseEvent) => {
     e.stopPropagation();
     setRotation(prev => prev + 180);
-    
     const prevOrigin = origin;
     setOrigin(destination);
     setDestination(prevOrigin);
-    
     setIsSwapped(!isSwapped);
   };
 
@@ -98,29 +92,33 @@ const StationSearch = () => {
     navigate(`/trenes?${params.toString()}`);
   };
 
-  // Sub-componente interno para manejar el LayoutId en vertical
+  // RenderStation adaptado para ocupar todo el ancho
   const RenderStation = ({ type }: { type: 'origin' | 'destination' }) => (
     <motion.div
       layout
       layoutId={`station-${type}`}
       transition={{ type: "spring", stiffness: 350, damping: 32 }}
-      className="w-full" // Ocupa todo el ancho
+      className="w-full"
     >
-      <div className="w-full hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors rounded-xl">
+      <button
+        type="button"
+        onClick={() => openField(type)}
+        className="w-full text-left hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors rounded-xl px-0"
+      >
         <StationTrigger
           icon={type}
           label={type === 'origin' ? "Origen" : "Destino"}
           value={type === 'origin' ? origin?.nombre : destination?.nombre}
           placeholder={type === 'origin' ? "¿Desde dónde?" : "¿A dónde vas?"}
-          onClick={() => openField(type)}
+          onClick={() => {}} // El click lo maneja el botón padre
         />
-      </div>
+      </button>
     </motion.div>
   );
 
   return (
-    <div ref={containerRef} className="relative w-full max-w-md mx-auto font-sans">
-      <div className="bg-white dark:bg-slate-900 rounded-[28px] shadow-[0_8px_32px_rgba(0,0,0,0.12)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.5)] overflow-hidden border border-slate-100 dark:border-white/[0.05]">
+    <div ref={containerRef} className="relative w-full mx-auto font-sans">
+      <div>
         
         <div className="p-2" />
 
@@ -140,7 +138,6 @@ const StationSearch = () => {
                 </>
               )}
 
-              {/* Botón de Swap Flotante en el medio a la derecha */}
               <div className="absolute right-4 top-1/2 -translate-y-1/2 z-20">
                 <SwapButton rotation={rotation} onClick={swapStations} />
               </div>
@@ -150,16 +147,22 @@ const StationSearch = () => {
 
         <div className="h-2" />
 
-        {/* Date (Debajo de todo) */}
-        <div className="px-4 border-t border-slate-100 dark:border-white/[0.07]">
-          <div className="w-full hover:bg-slate-50 dark:hover:bg-white/[0.02] transition-colors rounded-xl">
-            <DateTrigger 
-              label="Fecha de viaje" 
-              date={format(departureDate, "eeee dd 'de' MMMM", { locale: es })} 
-              active 
-              onClick={() => { setActivePicker('departure'); setActiveField(null); }} 
-            />
-          </div>
+        {/* SECCIÓN FECHA: Adaptada a ancho completo */}
+        <div className="border-t border-slate-100 dark:border-white/[0.07]">
+          <button 
+            type="button"
+            onClick={() => { setActivePicker('departure'); setActiveField(null); }} 
+            className="w-full px-4 py-1 flex items-center hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors group text-left"
+          >
+            <div className="w-full">
+              <DateTrigger 
+                label="Fecha de viaje" 
+                date={format(departureDate, "eeee dd 'de' MMMM", { locale: es })} 
+                active 
+                onClick={() => {}} // Click manejado por el botón padre
+              />
+            </div>
+          </button>
         </div>
 
         {/* Botón Buscar */}
@@ -180,7 +183,7 @@ const StationSearch = () => {
         </div>
       </div>
 
-      {/* Panels y Modales */}
+      {/* Panels (Station Selection) */}
       <AnimatePresence>
         {activeField && (
           <>
@@ -202,9 +205,11 @@ const StationSearch = () => {
         )}
       </AnimatePresence>
 
+      {/* --- EL CONTENEDOR QUE PEDISTE (CALENDARIO) --- */}
       <AnimatePresence>
         {activePicker && (
           <>
+            {/* Desktop Calendar Modal */}
             <div className="hidden md:block fixed inset-0 z-[100]">
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setActivePicker(null)} className="absolute inset-0 bg-slate-950/20 backdrop-blur-[2px]" />
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
@@ -224,6 +229,7 @@ const StationSearch = () => {
               </div>
             </div>
 
+            {/* Mobile Calendar Drawer */}
             <div className="md:hidden fixed inset-0 z-[80] flex items-end">
               <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setActivePicker(null)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
               <motion.div
@@ -242,7 +248,6 @@ const StationSearch = () => {
   );
 };
 
-// Botón de intercambio vertical mejorado
 const SwapButton = ({ rotation, onClick }: { rotation: number, onClick: any }) => (
   <motion.button 
     animate={{ rotate: rotation }}

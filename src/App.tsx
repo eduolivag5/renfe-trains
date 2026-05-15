@@ -9,10 +9,10 @@ import SearchResultsPage from './pages/SearchResultsPage';
 function AppContent({ isDarkMode, toggleTheme }: { isDarkMode: boolean, toggleTheme: () => void }) {
   const location = useLocation();
   const isMapPath = useMemo(() => location.pathname === '/mapa', [location.pathname]);
+  const isHome = useMemo(() => location.pathname === '/', [location.pathname]);
 
   return (
     <div className="relative h-[100dvh] w-full bg-slate-50 dark:bg-slate-950 overflow-hidden">
-      
       <Navbar isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
       
       <div className="relative h-full w-full flex flex-col">
@@ -23,7 +23,8 @@ function AppContent({ isDarkMode, toggleTheme }: { isDarkMode: boolean, toggleTh
 
         {/* Contenido Principal */}
         <main className={`relative z-10 h-full overflow-y-auto transition-all duration-500 ${isMapPath ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
-          <div className="px-6 max-w-7xl mx-auto w-full pt-10 md:pt-24 pb-28 md:pb-10">
+          {/* Quitamos el padding global aquí y lo manejamos por ruta */}
+          <div className={`w-full mx-auto ${isHome ? '' : 'px-6 max-w-7xl pt-10 md:pt-24 pb-28 md:pb-10'}`}>
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/mapa" element={null} /> 

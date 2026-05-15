@@ -33,7 +33,6 @@ export function createTrainIcon(fillColor: string, logicalSize = 52): ImageData 
   ctx.stroke();
 
   // --- 4. Icono SVG (Renderizado mediante Path2D) ---
-  // Escalamos el icono para que quepa armoniosamente (aprox 60% del círculo)
   const iconScale = 0.055; 
   ctx.save();
   
@@ -53,6 +52,9 @@ export function createTrainIcon(fillColor: string, logicalSize = 52): ImageData 
   return ctx.getImageData(0, 0, size, size);
 }
 
+/**
+ * Registra todos los iconos dinámicos en la instancia del mapa de Mapbox.
+ */
 export function registerIcons(map: mapboxgl.Map) {
   const add = (name: string, color: string) => {
     if (!map.hasImage(name)) {
@@ -60,6 +62,11 @@ export function registerIcons(map: mapboxgl.Map) {
       map.addImage(name, imageData, { pixelRatio: 2 });
     }
   };
+
+  // Registro de todos los grupos definidos en MapConstants
   add('train-icon-cercanias', COLORS.cercanias);
-  add('train-icon-other', COLORS.other);
+  add('train-icon-rodalies', COLORS.rodalies);
+  add('train-icon-ave', COLORS.altaVelocidad);
+  add('train-icon-md', COLORS.mediaDistancia);
+  add('train-icon-other', COLORS.otros); // Ajustado de 'other' a 'otros' para coincidir con tu constant
 }
