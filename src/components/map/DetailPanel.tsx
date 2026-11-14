@@ -4,6 +4,7 @@ import { X, Navigation2, ChevronDown, ChevronUp, Loader2, AlertCircle, Radio, Ey
 import { trainsService, type TrainMap, type TrainDetail } from '../../api/trainsService';
 import { COLORS } from './MapConstants';
 import TrainItinerary from './TrainItinerary';
+import { getMapTrainInfo, isRodalies } from '../../utils/trainUtils';
 
 interface DetailPanelProps {
   train: TrainMap;
@@ -25,8 +26,11 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ train, onClose }) => {
   // Referencia para controlar el scroll de la lista de paradas
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  // Rodalies mantiene la cabecera original; el resto muestra logo nuevo + familia
+  const rodalies = isRodalies(train.tipo);
+  const info = rodalies ? null : getMapTrainInfo(train.tipo);
   const isCercanias = train.tipo.startsWith('C') || train.tipo === 'CERCANIAS';
-  const accent = isCercanias ? COLORS.cercanias : COLORS.altaVelocidad;
+  const accent = info?.family?.color ?? (isCercanias ? COLORS.cercanias : COLORS.altaVelocidad);
   const translatedStatus = STATUS_LABELS[train.status] || train.status;
 
   const handleItinerary = useCallback(async () => {
@@ -98,6 +102,45 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ train, onClose }) => {
         <div className="px-5 pt-3 pb-5 space-y-3">
           <div className="flex items-start justify-between">
             <div className="flex-1 min-w-0">
+              {info ? (
+                <div className="mb-2.5 space-y-2">
+                  {/* Logo del servicio + código de línea/subtipo */}
+                  <div className="flex items-center gap-2.5">
+                    <img
+                      src={info.logo.src}
+                      alt={train.tipo}
+                      className={`h-6 w-auto max-w-[140px] object-contain object-left ${info.logo.monoDark ? 'dark:brightness-0 dark:invert' : ''}`}
+                    />
+                    {info.code && (
+                      <span
+                        className="rounded-md px-1.5 py-0.5 text-[11px] font-black leading-none text-white"
+                        style={{ backgroundColor: accent }}
+                      >
+                        {info.code}
+                      </span>
+                    )}
+                  </div>
+                  {/* Familia + estado */}
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                    {info.family && (
+                      <span
+                        className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-[3px] text-[10px] font-black uppercase tracking-[0.08em] bg-[var(--fam-bg)] text-[var(--fam)] dark:bg-white/[0.06] dark:text-slate-200"
+                        style={{
+                          '--fam': info.family.color,
+                          '--fam-bg': `${info.family.color}14`,
+                          borderColor: `${info.family.color}40`,
+                        } as React.CSSProperties}
+                      >
+                        <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: info.family.color }} />
+                        {info.family.name}
+                      </span>
+                    )}
+                    <span className="text-xs uppercase font-medium text-slate-500 dark:text-slate-400">
+                      {translatedStatus}
+                    </span>
+                  </div>
+                </div>
+              ) : (
               <div className="flex items-center gap-2 mb-1.5">
                 <span 
                   className="inline-flex items-center gap-1.5 text-[10px] font-black tracking-[0.1em] uppercase px-2.5 py-[3px] rounded-full border"
@@ -113,6 +156,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ train, onClose }) => {
                   {translatedStatus}
                 </span>
               </div>
+              )}
               <h2 className="text-[22px] font-black tracking-tight leading-none truncate text-indigo-950 dark:text-white">
                 {train.label}
               </h2>

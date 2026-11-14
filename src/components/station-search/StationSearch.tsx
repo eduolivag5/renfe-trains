@@ -89,7 +89,7 @@ const StationSearch = () => {
       destination: destination.codigo,
       date: format(departureDate, 'yyyy-MM-dd'),
     });
-    navigate(`/trenes?${params.toString()}`);
+    navigate(`/buscar?${params.toString()}`);
   };
 
   // RenderStation adaptado para ocupar todo el ancho

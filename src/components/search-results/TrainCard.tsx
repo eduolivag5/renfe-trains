@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Timer, ChevronRight, Info, Loader2, AlertCircle } from 'lucide-react';
-import { TRAIN_BRAND_MAP } from '../../utils/trainUtils';
+import { getTrainIdentity, getTrainLogo, FALLBACK_LOGO } from '../../utils/trainUtils';
 import { trainsService, type TrainDetail } from '../../api/trainsService';
 import TrainItinerary from '../map/TrainItinerary';
 
@@ -11,7 +11,8 @@ export const TrainCard = ({ train, index }: any) => {
   const [showItinerary, setShowItinerary] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const brand = TRAIN_BRAND_MAP[train.trainType] || { logo: 'AVE', color: '#002147' };
+  const brand = getTrainIdentity(train.trainType);
+  const logo = getTrainLogo(brand.logo);
 
   const handleFetchDetail = async (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -69,12 +70,12 @@ export const TrainCard = ({ train, index }: any) => {
       {/* 2. Logo Centrado */}
       <div className="flex justify-center w-full mt-2 z-10">
         <img 
-          src={`/icons/Renfe_${brand.logo}.svg`} 
+          src={logo.src}
           alt={train.trainType} 
-          className="h-9 w-auto object-contain drop-shadow-sm" 
+          className={`h-7 w-auto object-contain ${logo.monoDark ? 'dark:brightness-0 dark:invert' : ''}`}
           onError={(e) => {
             const target = e.target as HTMLImageElement;
-            target.src = '/icons/Renfe.svg';
+            target.src = FALLBACK_LOGO;
             target.onerror = null;
           }}
         />

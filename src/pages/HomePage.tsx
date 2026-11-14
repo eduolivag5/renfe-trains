@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import StationSearch from '../components/station-search/StationSearch';
 import HeroSection from '../components/home/HeroSection';
+import TrainFamilies from '../components/home/TrainFamilies';
 
 const HomePage = () => {
   const navigate = useNavigate();
@@ -55,6 +56,9 @@ const HomePage = () => {
           </div>         
 
         </section>
+
+        {/* CÓMO FUNCIONAN LOS TRENES */}
+        <TrainFamilies />
 
         {/* RESTO DE COMPONENTES */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">

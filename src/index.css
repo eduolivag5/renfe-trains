@@ -2,6 +2,11 @@
 
 @variant dark (&:where(.dark, .dark *));
 
+/* Tipografía corporativa (estilo Renfe): Montserrat como fuente base */
+@theme {
+  --font-sans: "Montserrat", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
 @layer base {
   html, body, #root {
     /* Ocupar el 100% real sin scroll elástico molesto */
@@ -19,8 +24,13 @@
   }
 
   body {
-    min-height: 100dvh; 
-    
+    min-height: 100dvh;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    letter-spacing: -0.005em;
+
     /* Firefox: scrollbar fina y azul */
     scrollbar-width: thin;
     scrollbar-color: #3b82f6 transparent;
@@ -77,4 +87,8 @@ body {
 
 .dark body {
   @apply bg-slate-950 text-slate-50;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }

@@ -17,7 +17,7 @@ export const LiveCounter: React.FC<LiveCounterProps> = ({ count, lastUpdate }) =
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       className="
-        absolute top-6 left-6 z-40 flex flex-col gap-3 p-2 rounded-[24px]
+        absolute top-4 left-4 md:top-28 md:left-6 z-40 flex flex-col gap-3 p-2 rounded-[24px]
         backdrop-blur-md border shadow-xl pointer-events-none select-none w-[260px]
         bg-white/70 border-slate-200 text-slate-900
         dark:bg-slate-900/70 dark:border-white/10 dark:text-white

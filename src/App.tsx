@@ -1,10 +1,13 @@
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import SettingsPage from './pages/SettingsPage';
 import Navbar from './ui/Navbar';
 import HomePage from './pages/HomePage';
-import MapsPage from './pages/MapsPage';
 import SearchResultsPage from './pages/SearchResultsPage';
+import TrainsPage from './pages/TrainsPage';
+
+// El mapa (d3 + geometría) va en su propio chunk: solo se descarga al abrir /mapa
+const MapsPage = lazy(() => import('./pages/MapsPage'));
 
 function AppContent({ isDarkMode, toggleTheme }: { isDarkMode: boolean, toggleTheme: () => void }) {
   const location = useLocation();
@@ -17,9 +20,14 @@ function AppContent({ isDarkMode, toggleTheme }: { isDarkMode: boolean, toggleTh
       
       <div className="relative h-full w-full flex flex-col">
         {/* Capa del Mapa */}
-        <div className={`absolute inset-0 z-0 transition-opacity duration-500 ${isMapPath ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}>
-          <MapsPage isDarkMode={isDarkMode} />
-        </div>
+        {/* Solo se monta en /mapa: fuera de esa ruta no consume CPU ni hace peticiones */}
+        {isMapPath && (
+          <div className="absolute inset-0 z-0 animate-[fadeIn_0.4s_ease-out]">
+            <Suspense fallback={null}>
+              <MapsPage isDarkMode={isDarkMode} />
+            </Suspense>
+          </div>
+        )}
 
         {/* Contenido Principal */}
         <main className={`relative z-10 h-full overflow-y-auto transition-all duration-500 ${isMapPath ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
@@ -29,7 +37,8 @@ function AppContent({ isDarkMode, toggleTheme }: { isDarkMode: boolean, toggleTh
               <Route path="/" element={<HomePage />} />
               <Route path="/mapa" element={null} /> 
               <Route path="/ajustes" element={<SettingsPage isDarkMode={isDarkMode} toggleTheme={toggleTheme} />} />
-              <Route path="/trenes" element={<SearchResultsPage />} />
+              <Route path="/trenes" element={<TrainsPage />} />
+              <Route path="/buscar" element={<SearchResultsPage />} />
             </Routes>
           </div>
         </main>
