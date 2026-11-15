@@ -67,7 +67,7 @@ const RotatingDestination: React.FC = () => {
           animate={{ y: '0%', opacity: 1 }}
           exit={{ y: '-100%', opacity: 0 }}
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-          className="absolute inset-x-0 leading-[1.3] text-violet-700 dark:text-violet-400 lg:right-auto"
+          className="absolute inset-x-0 leading-[1.3] text-accent-700 dark:text-accent-400 lg:right-auto"
         >
           {DESTINATIONS[index]}.
         </motion.span>
@@ -96,7 +96,7 @@ const DepartureBoard: React.FC = () => (
     {/* Cabecera */}
     <div className="flex items-center justify-between border-b border-slate-100 px-6 py-4 dark:border-white/5">
       <div className="flex items-center gap-3">
-        <div className="grid h-9 w-9 place-items-center rounded-xl bg-violet-50 text-violet-700 dark:bg-violet-500/10 dark:text-violet-400">
+        <div className="grid h-9 w-9 place-items-center rounded-xl bg-accent-50 text-accent-700 dark:bg-accent-500/10 dark:text-accent-400">
           <TrainFront size={18} />
         </div>
         <div className="leading-tight">
@@ -168,7 +168,7 @@ const HeroSection: React.FC = () => {
         </div>
 
         {/* --- CONTENIDO --- */}
-        <div className="mx-auto flex w-full max-w-7xl flex-1 items-center px-6 pt-16 pb-8 md:pt-32">
+        <div className="mx-auto flex w-full max-w-7xl flex-1 items-center px-6 pt-16 pb-8 md:pt-16">
           <div className="grid w-full grid-cols-1 items-center gap-16 lg:grid-cols-[1.15fr_1fr]">
             {/* Texto */}
             <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
@@ -201,10 +201,10 @@ const HeroSection: React.FC = () => {
               <motion.div {...fadeUp(0.24)} className="mt-10 flex w-full flex-col gap-3 sm:w-auto sm:flex-row">
                 <button
                   onClick={scrollToSearch}
-                  className="group inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-7 py-3.5 font-semibold text-white transition-colors hover:bg-violet-700 active:scale-[0.98] dark:bg-white dark:text-slate-900 dark:hover:bg-violet-200"
+                  className="group inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-7 py-3.5 font-semibold text-white transition-colors hover:bg-accent-700 active:scale-[0.98] dark:bg-white dark:text-slate-900 dark:hover:bg-accent-200"
                 >
                   <Search size={18} />
-                  <span>Buscar billetes</span>
+                  <span>Buscar trenes</span>
                   <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" />
                 </button>
 

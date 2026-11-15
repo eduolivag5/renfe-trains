@@ -24,7 +24,6 @@ const MapsPage: React.FC<{ isDarkMode: boolean }> = ({ isDarkMode }) => {
   const mapRef = useRef<SpainMapHandle>(null);
   const [trenes, setTrenes] = useState<TrainMap[]>([]);
   const [selectedTren, setSelectedTren] = useState<TrainMap | null>(null);
-  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -34,7 +33,6 @@ const MapsPage: React.FC<{ isDarkMode: boolean }> = ({ isDarkMode }) => {
         .then((data) => {
           if (cancelled) return;
           setTrenes(data);
-          setLastUpdate(new Date());
         })
         .catch((e) => console.error('Error fetching trains:', e));
 
@@ -60,7 +58,7 @@ const MapsPage: React.FC<{ isDarkMode: boolean }> = ({ isDarkMode }) => {
       />
 
       {/* Controles de zoom */}
-      <div className="absolute right-4 top-4 z-40 flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white/80 shadow-xl backdrop-blur-md divide-y divide-slate-200 md:right-6 md:top-28 dark:border-white/10 dark:bg-slate-900/80 dark:divide-white/10">
+      <div className="absolute right-4 top-4 z-40 flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white/80 shadow-xl backdrop-blur-md divide-y divide-slate-200 md:right-6 md:top-6 dark:border-white/10 dark:bg-slate-900/80 dark:divide-white/10">
         <ZoomButton label="Acercar" onClick={() => mapRef.current?.zoomIn()}>
           <Plus size={18} strokeWidth={2.5} />
         </ZoomButton>
@@ -72,7 +70,7 @@ const MapsPage: React.FC<{ isDarkMode: boolean }> = ({ isDarkMode }) => {
         </ZoomButton>
       </div>
 
-      {trenes.length > 0 && <LiveCounter count={trenes.length} lastUpdate={lastUpdate} />}
+      {trenes.length > 0 && <LiveCounter trains={trenes} />}
 
       <AnimatePresence>
         {selectedTren && (

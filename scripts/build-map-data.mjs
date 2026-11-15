@@ -10,7 +10,7 @@ import fs from 'node:fs';
 import * as topo from 'topojson-client';
 import { topology } from 'topojson-server';
 import { presimplify, simplify, quantile } from 'topojson-simplify';
-import { geoIdentity } from 'd3-geo';
+import { geoArea, geoIdentity } from 'd3-geo';
 import { geoProject } from 'd3-geo-projection';
 
 const [geoDir, outFile] = process.argv.slice(2);
@@ -26,13 +26,27 @@ provinces.features = provinces.features
 
 // ---------- 2. Vecinos recortados al encuadre de la península ----------
 const world = readJSON(`${geoDir}/countries-10m.json`);
-const NEIGHBORS = new Set(['620', '250', '020', '504', '012', '292']); // PRT, FRA, AND, MAR, DZA, GIB
-const clip = geoIdentity().reflectY(false).clipExtent([[-12.5, 34], [6.5, 45.5]]);
+// PRT, FRA, AND, MAR, DZA, GIB y alrededores: con pantallas altas (móvil) se ve mucho más norte y sur
+const NEIGHBORS = new Set(['620', '250', '020', '504', '012', '292', '732', '788', '380', '756', '492', '056', '442', '276', '528', '826', '372', '478', '466', '434', '674', '336', '470']);
+// Recorte amplio (lon -24…20, lat 18…60) para que ningún encuadre deje ver un borde cortado
+const clip = geoIdentity().reflectY(false).clipExtent([[-24, 18], [20, 60]]);
 const neighbors = topo.feature(world, world.objects.countries);
+// El recorte plano puede invertir el sentido de algún anillo; en geometría esférica (d3-geo)
+// eso convierte el país en "todo el mundo menos el país" y pinta el fondo entero. Lo corregimos.
+const rewindPolygon = (rings) => {
+  const poly = { type: 'Polygon', coordinates: rings };
+  return geoArea(poly) > 2 * Math.PI ? rings.map((r) => r.slice().reverse()) : rings;
+};
+const fixWinding = (geometry) => {
+  if (geometry.type === 'Polygon') return { ...geometry, coordinates: rewindPolygon(geometry.coordinates) };
+  if (geometry.type === 'MultiPolygon') return { ...geometry, coordinates: geometry.coordinates.map(rewindPolygon) };
+  return geometry;
+};
 neighbors.features = neighbors.features
   .filter((f) => NEIGHBORS.has(String(f.id)))
   .map((f) => geoProject({ type: 'Feature', id: f.id, properties: {}, geometry: f.geometry }, clip))
-  .filter((f) => f.geometry);
+  .filter((f) => f.geometry)
+  .map((f) => ({ ...f, geometry: fixWinding(f.geometry) }));
 
 // ---------- 3. Topología, simplificación y cuantización ----------
 let t = topology({ provinces, neighbors }, 1e5);

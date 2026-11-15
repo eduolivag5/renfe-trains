@@ -1,42 +1,26 @@
-const TrainSkeleton = () => {
-  return (
-    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/5 rounded-3xl p-5 flex flex-col gap-4 animate-pulse shadow-sm">
-      {/* Header del Skeleton: Logo y Tipo de Tren */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          {/* Espacio para el Icono */}
-          <div className="w-8 h-6 bg-slate-200 dark:bg-slate-800 rounded-lg" />
-          {/* Espacio para el texto del tipo de tren */}
-          <div className="w-16 h-3 bg-slate-200 dark:bg-slate-800 rounded-full" />
-        </div>
-        {/* Badge opcional (ej. "Más rápido") */}
-        <div className="w-20 h-4 bg-slate-100 dark:bg-slate-800/50 rounded-full" />
+/** Tarjeta de carga con la misma estructura que TrainCard (etiquetas arriba + horario) */
+const TrainSkeleton = () => (
+  <div className="rounded-2xl border border-slate-200/80 bg-white px-4 pb-4 pt-3 md:px-5 dark:border-white/[0.07] dark:bg-slate-900/60">
+    <div className="mb-3 flex items-center justify-between">
+      <span className="h-6 w-28 animate-pulse rounded-full bg-slate-100 dark:bg-white/[0.06]" />
+      <span className="h-6 w-20 animate-pulse rounded-full bg-slate-100 dark:bg-white/[0.06]" />
+    </div>
+    <div className="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-3 md:grid-cols-[8.5rem_1fr_auto] md:gap-x-6">
+      <div className="flex items-center gap-2.5 md:flex-col md:items-start md:gap-1.5">
+        <span className="h-4 w-14 animate-pulse rounded-md bg-slate-200 dark:bg-white/10" />
+        <span className="h-2.5 w-10 animate-pulse rounded-full bg-slate-100 dark:bg-white/[0.06]" />
       </div>
-
-      {/* Body del Skeleton: Horarios y Trayecto */}
-      <div className="flex items-center justify-between px-1 mt-2">
-        {/* Salida */}
-        <div className="space-y-2">
-          <div className="w-14 h-7 bg-slate-200 dark:bg-slate-800 rounded-md" />
-          <div className="w-8 h-2 bg-slate-100 dark:bg-slate-800 rounded-full" />
-        </div>
-
-        {/* Línea de tiempo / Duración */}
-        <div className="flex flex-col items-center flex-1 px-8 space-y-3">
-          {/* Tiempo estimado */}
-          <div className="w-12 h-3 bg-slate-200 dark:bg-slate-800 rounded-full" />
-          {/* Línea visual */}
-          <div className="w-full h-[2px] bg-slate-100 dark:bg-slate-800 rounded-full" />
-        </div>
-
-        {/* Llegada */}
-        <div className="space-y-2 flex flex-col items-end">
-          <div className="w-14 h-7 bg-slate-200 dark:bg-slate-800 rounded-md" />
-          <div className="w-8 h-2 bg-slate-100 dark:bg-slate-800 rounded-full" />
-        </div>
+      <span className="col-start-2 row-start-1 h-8 w-8 animate-pulse justify-self-end rounded-full bg-slate-100 md:col-start-3 dark:bg-white/[0.06]" />
+      <div className="col-span-2 flex items-center gap-5 md:col-span-1 md:col-start-2 md:row-start-1">
+        <span className="h-7 w-16 animate-pulse rounded-lg bg-slate-200 dark:bg-white/10" />
+        <span className="flex flex-1 flex-col items-center gap-2">
+          <span className="h-2.5 w-14 animate-pulse rounded-full bg-slate-100 dark:bg-white/[0.06]" />
+          <span className="h-0.5 w-full animate-pulse rounded-full bg-slate-100 dark:bg-white/[0.06]" />
+        </span>
+        <span className="h-7 w-16 animate-pulse rounded-lg bg-slate-200 dark:bg-white/10" />
       </div>
     </div>
-  );
-};
+  </div>
+);
 
 export default TrainSkeleton;

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Logo">
+  <defs>
+    <linearGradient id="logo-bg" x1="8" y1="4" x2="56" y2="60" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3b82f6"/>
+      <stop offset="1" stop-color="#1e3a8a"/>
+    </linearGradient>
+    <linearGradient id="logo-gloss" x1="32" y1="0" x2="32" y2="34" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Base -->
+  <rect width="64" height="64" rx="18" fill="url(#logo-bg)"/>
+  <rect width="64" height="64" rx="18" fill="url(#logo-gloss)"/>
+
+  <!-- Trazado de vía que dibuja una "r": sube y gira hacia el destino -->
+  <path d="M19 48V33c0-7.18 5.82-13 13-13h6" fill="none" stroke="#ffffff" stroke-width="7" stroke-linecap="round"/>
+
+  <!-- Estación de destino con halo "en vivo" -->
+  <circle cx="43" cy="20" r="9.5" fill="#7dd3fc" fill-opacity="0.25"/>
+  <circle cx="43" cy="20" r="5" fill="#38bdf8" stroke="#ffffff" stroke-width="3"/>
+</svg>

@@ -1,129 +1,220 @@
-import { useState, useRef, memo } from 'react';
-import { Search, X, Loader2, MapPin, ChevronRight } from 'lucide-react';
+import { memo, useEffect, useRef, useState } from 'react';
+import { ArrowLeft, Search, SearchX, TrainFront, X, Star, CornerDownLeft } from 'lucide-react';
+import { POPULAR_STATIONS, prettyName, stationPlace, type Estacion } from '../../utils/stationUtils';
 
-interface Estacion { codigo: string; nombre: string; }
-type ActiveField = 'origin' | 'destination' | null;
+type Field = 'origin' | 'destination';
 
 interface StationPanelProps {
-  field: ActiveField;
+  field: Field;
   query: string;
   onQueryChange: (v: string) => void;
   results: Estacion[];
   loading: boolean;
   onSelect: (e: Estacion) => void;
   onClose: () => void;
+  /** Código de la estación elegida en el otro campo (no se puede repetir) */
+  excludeCode?: string;
   mobile?: boolean;
 }
 
-export const StationPanel = memo(({ field, query, onQueryChange, results, loading, onSelect, onClose, mobile }: StationPanelProps) => {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [inputVisible, setInputVisible] = useState(!mobile);
-
-  const activateInput = () => {
-    setInputVisible(true);
-    setTimeout(() => inputRef.current?.focus(), 40);
-  };
-
+/** Resalta la parte del nombre que coincide con lo escrito */
+const Highlight = ({ text, query }: { text: string; query: string }) => {
+  const q = query.trim().toLocaleLowerCase('es');
+  const i = q.length >= 2 ? text.toLocaleLowerCase('es').indexOf(q) : -1;
+  if (i < 0) return <>{text}</>;
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-slate-950 font-sans">
-      {/* Header Estilo iPhone */}
-      <div className={`shrink-0 ${mobile ? 'px-4 pt-14 pb-2' : 'px-4 py-4'}`}>
-        <div className="flex items-center justify-between mb-4 px-1">
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-            {field === 'origin' ? 'Origen' : 'Destino'}
-          </h1>
-          {/* Botón de cierre iconográfico para ambos casos */}
-          <button 
-            onClick={onClose} 
-            className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 dark:bg-white/10 active:scale-90 transition-transform"
-          >
-            <X size={18} className="text-slate-600 dark:text-slate-300" strokeWidth={2.5} />
-          </button>
-        </div>
+    <>
+      {text.slice(0, i)}
+      <mark className="rounded-[3px] bg-accent-500/15 text-accent-700 dark:bg-accent-400/20 dark:text-accent-300">
+        {text.slice(i, i + q.length)}
+      </mark>
+      {text.slice(i + q.length)}
+    </>
+  );
+};
 
-        <div className="flex items-center gap-3 w-full">
-          <div className="flex-1 flex items-center gap-2 bg-slate-100 dark:bg-white/[0.1] rounded-xl px-3 h-10 min-w-0">
-            <Search size={18} className="text-slate-500 shrink-0" strokeWidth={2.5} />
-            
-            <div className="flex-1 min-w-0 flex items-center">
-              {mobile && !inputVisible ? (
-                <button onPointerDown={activateInput} className="w-full text-left">
-                  <span className="text-[17px] text-slate-400 truncate font-normal">Buscar estación</span>
-                </button>
-              ) : (
-                <input
-                  ref={inputRef}
-                  type="text"
-                  inputMode="search"
-                  enterKeyHint="search"
-                  autoFocus={!mobile}
-                  value={query}
-                  onChange={(e) => onQueryChange(e.target.value)}
-                  placeholder="Buscar estación"
-                  className="w-full text-sm bg-transparent outline-none text-slate-900 dark:text-white placeholder:text-slate-400 font-normal"
-                />
-              )}
-            </div>
+const SkeletonRow = () => (
+  <div className="flex items-center gap-3 px-3 py-3">
+    <span className="h-10 w-10 shrink-0 animate-pulse rounded-xl bg-slate-100 dark:bg-white/[0.06]" />
+    <div className="flex-1 space-y-2">
+      <span className="block h-3 w-3/5 animate-pulse rounded-full bg-slate-100 dark:bg-white/[0.06]" />
+      <span className="block h-2.5 w-2/5 animate-pulse rounded-full bg-slate-100 dark:bg-white/[0.06]" />
+    </div>
+  </div>
+);
 
-            {query && (
-              <button 
-                onPointerDown={() => onQueryChange('')}
-                className="bg-slate-300 dark:bg-white/20 rounded-full p-0.5 shrink-0"
+export const StationPanel = memo(
+  ({ field, query, onQueryChange, results, loading, onSelect, onClose, excludeCode, mobile }: StationPanelProps) => {
+    const inputRef = useRef<HTMLInputElement>(null);
+    const listRef = useRef<HTMLUListElement>(null);
+    const [active, setActive] = useState(0);
+
+    const showPopular = query.trim().length < 3;
+    const items = (showPopular ? POPULAR_STATIONS : results).filter((e) => e.codigo !== excludeCode);
+    const isOrigin = field === 'origin';
+
+    // En escritorio enfocamos al abrir; en iOS el teclado solo se abre con un toque directo
+    useEffect(() => {
+      if (!mobile) inputRef.current?.focus();
+    }, [mobile]);
+
+    // El elemento activo siempre visible al navegar con el teclado
+    useEffect(() => {
+      listRef.current?.querySelector<HTMLElement>(`[data-index="${active}"]`)?.scrollIntoView({ block: 'nearest' });
+    }, [active]);
+
+    const onKeyDown = (e: React.KeyboardEvent) => {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setActive((i) => Math.min(items.length - 1, i + 1));
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setActive((i) => Math.max(0, i - 1));
+      } else if (e.key === 'Enter' && items[active]) {
+        e.preventDefault();
+        onSelect(items[active]);
+      } else if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    return (
+      <div className={`flex h-full flex-col ${mobile ? 'bg-slate-50 dark:bg-slate-950' : ''}`}>
+        {/* Cabecera + buscador */}
+        <div className={`shrink-0 ${mobile ? 'px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)]' : 'p-3'}`}>
+          {mobile && (
+            <div className="mb-3 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Volver"
+                className="-ml-2 flex h-10 w-10 items-center justify-center rounded-full text-slate-600 active:bg-slate-200 dark:text-slate-300 dark:active:bg-white/10"
               >
-                <X size={12} className="text-white dark:text-slate-300" strokeWidth={3} />
+                <ArrowLeft size={22} />
+              </button>
+              <h2 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">
+                {isOrigin ? '¿Desde dónde sales?' : '¿A dónde vas?'}
+              </h2>
+            </div>
+          )}
+
+          <div className="flex h-12 items-center gap-2.5 rounded-2xl border border-slate-200 bg-white px-3.5 shadow-sm transition-colors focus-within:border-accent-500 focus-within:ring-4 focus-within:ring-accent-500/10 dark:border-white/10 dark:bg-white/[0.04] dark:focus-within:border-accent-400">
+            <Search size={18} className="shrink-0 text-slate-400" strokeWidth={2.5} />
+            <input
+              ref={inputRef}
+              type="text"
+              inputMode="search"
+              enterKeyHint="search"
+              autoComplete="off"
+              spellCheck={false}
+              value={query}
+              onChange={(e) => {
+                onQueryChange(e.target.value);
+                setActive(0);
+              }}
+              onKeyDown={onKeyDown}
+              placeholder={isOrigin ? 'Estación o ciudad de origen' : 'Estación o ciudad de destino'}
+              aria-label={isOrigin ? 'Buscar estación de origen' : 'Buscar estación de destino'}
+              className="min-w-0 flex-1 bg-transparent text-[15px] font-medium text-slate-900 outline-none placeholder:font-normal placeholder:text-slate-400 dark:text-white"
+            />
+            {query && (
+              <button
+                type="button"
+                onPointerDown={(e) => {
+                  e.preventDefault();
+                  onQueryChange('');
+                  inputRef.current?.focus();
+                }}
+                aria-label="Borrar"
+                className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-slate-200 text-slate-500 dark:bg-white/15 dark:text-slate-300"
+              >
+                <X size={12} strokeWidth={3} />
               </button>
             )}
           </div>
         </div>
-      </div>
 
-      {/* Resultados / Estado Vacío */}
-      <div className="flex-1 overflow-y-auto overscroll-contain px-4">
-        {loading ? (
-          <div className="flex flex-col items-center py-20">
-            <Loader2 size={28} className="animate-spin text-blue-500/80" strokeWidth={2} />
-          </div>
-        ) : results.length > 0 ? (
-          <ul className="divide-y divide-slate-100 dark:divide-white/[0.05]">
-            {results.map((est) => (
-              <li key={est.codigo}>
-                <button
-                  onPointerDown={() => onSelect(est)}
-                  className="w-full flex items-center gap-4 py-4 text-left active:opacity-40 transition-opacity"
-                >
-                  <div className="w-10 h-10 rounded-full bg-slate-50 dark:bg-white/[0.05] flex items-center justify-center shrink-0">
-                    <MapPin size={18} className="text-slate-400" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-slate-900 dark:text-white truncate">
-                      {est.nombre}
-                    </div>
-                    <div className="text-xs text-slate-400 dark:text-slate-500 font-normal">
-                      Renfe · {est.codigo}
-                    </div>
-                  </div>
-                  <ChevronRight size={18} className="text-slate-300" strokeWidth={1.5} />
-                </button>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <div className="flex flex-col items-center justify-center py-24 text-center px-6">
-            <div className="w-16 h-16 rounded-full bg-slate-50 dark:bg-white/[0.03] flex items-center justify-center mb-4">
-              <Search size={28} className="text-slate-200 dark:text-white/10" strokeWidth={2} />
+        {/* Lista */}
+        <div className={`min-h-0 flex-1 overflow-y-auto overscroll-contain ${mobile ? 'px-2 pb-8' : 'px-1.5 pb-1.5'}`}>
+          {!loading && items.length > 0 && (
+            <p className="flex items-center gap-1.5 px-3 pb-1.5 pt-1 text-[11px] font-black uppercase tracking-[0.15em] text-slate-400 dark:text-slate-500">
+              {showPopular ? (
+                <>
+                  <Star size={11} strokeWidth={3} /> Estaciones principales
+                </>
+              ) : (
+                `${items.length} ${items.length === 1 ? 'estación' : 'estaciones'}`
+              )}
+            </p>
+          )}
+
+          {loading ? (
+            <div>
+              {Array.from({ length: 5 }).map((_, i) => (
+                <SkeletonRow key={i} />
+              ))}
             </div>
-            <p className="text-sm font-semibold text-slate-800 dark:text-slate-200 mb-1">
-              {query.length === 0 ? 'Encuentra tu estación' : 'Sin resultados'}
-            </p>
-            <p className="text-sm text-slate-400 dark:text-slate-500 font-normal">
-              {query.length < 3 
-                ? 'Escribe el nombre de la ciudad o la estación para buscar trenes.' 
-                : `No hemos encontrado nada para "${query}"`
-              }
-            </p>
-          </div>
-        )}
+          ) : items.length > 0 ? (
+            <ul ref={listRef} role="listbox" aria-label="Estaciones">
+              {items.map((est, i) => {
+                const name = prettyName(est.nombre);
+                const place = stationPlace(est);
+                const isActive = i === active;
+                return (
+                  <li key={est.codigo} role="option" aria-selected={isActive} data-index={i}>
+                    <button
+                      type="button"
+                      onPointerDown={(e) => {
+                        e.preventDefault();
+                        onSelect(est);
+                      }}
+                      onMouseEnter={() => setActive(i)}
+                      className={`group flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors ${
+                        isActive && !mobile ? 'bg-slate-100 dark:bg-white/[0.06]' : 'active:bg-slate-100 dark:active:bg-white/[0.06]'
+                      }`}
+                    >
+                      <span
+                        className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl transition-colors ${
+                          isOrigin
+                            ? 'bg-accent-500/10 text-accent-600 dark:text-accent-400'
+                            : 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
+                        }`}
+                      >
+                        <TrainFront size={18} strokeWidth={2.25} />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-[15px] font-semibold text-slate-900 dark:text-white">
+                          <Highlight text={name} query={query} />
+                        </span>
+                        {place && (
+                          <span className="mt-0.5 block truncate text-[12.5px] text-slate-500 dark:text-slate-400">{place}</span>
+                        )}
+                      </span>
+                      {isActive && !mobile ? (
+                        <CornerDownLeft size={15} className="shrink-0 text-slate-400" />
+                      ) : (
+                        <span className="shrink-0 rounded-md bg-slate-100 px-1.5 py-0.5 font-mono text-[10.5px] font-semibold text-slate-400 dark:bg-white/[0.05] dark:text-slate-500">
+                          {est.codigo}
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
+              <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400 dark:bg-white/[0.05] dark:text-slate-500">
+                <SearchX size={24} />
+              </span>
+              <p className="text-[15px] font-bold text-slate-900 dark:text-white">Sin resultados</p>
+              <p className="mt-1 max-w-[16rem] text-sm text-slate-500 dark:text-slate-400">
+                No encontramos estaciones para «{query}». Prueba con el nombre de la ciudad.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-  );
-});
+    );
+  },
+);

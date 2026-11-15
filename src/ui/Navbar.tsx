@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React from 'react';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
 import { Home, Map, TrainFront, Search, Settings, Sun, Moon, type LucideIcon } from 'lucide-react';
@@ -22,81 +22,29 @@ const NAV_LINKS: NavLink[] = [
   { name: 'Ajustes', Icon: Settings, href: '/ajustes' },
 ];
 
-const SPRING = { type: 'spring', stiffness: 420, damping: 34 } as const;
+/* Ancho del rail lateral en escritorio: 88px (App.tsx lo reserva con md:pl-[88px]) */
 
-/**
- * El scroll de la app ocurre dentro de <main>, no en window.
- * Devuelve si se ha hecho scroll y si el usuario está bajando (para ocultar la barra móvil).
- */
-function useMainScroll(pathname: string) {
-  const [scrolled, setScrolled] = useState(false);
-  const [hidden, setHidden] = useState(false);
-  const lastY = useRef(0);
+const SPRING = { type: 'spring', stiffness: 460, damping: 36 } as const;
 
-  useEffect(() => {
-    const el = document.querySelector('main');
-    if (!el) return;
-
-    lastY.current = el.scrollTop;
-    // Sincroniza el estado inicial al cambiar de ruta (fuera del cuerpo del efecto)
-    const initFrame = requestAnimationFrame(() => {
-      setScrolled(el.scrollTop > 12);
-      setHidden(false);
-    });
-
-    let ticking = false;
-    const onScroll = () => {
-      if (ticking) return;
-      ticking = true;
-      requestAnimationFrame(() => {
-        const y = el.scrollTop;
-        const delta = y - lastY.current;
-        setScrolled(y > 12);
-        if (Math.abs(delta) > 6) {
-          setHidden(delta > 0 && y > 120);
-          lastY.current = y;
-        }
-        ticking = false;
-      });
-    };
-
-    el.addEventListener('scroll', onScroll, { passive: true });
-    return () => {
-      cancelAnimationFrame(initFrame);
-      el.removeEventListener('scroll', onScroll);
-    };
-  }, [pathname]);
-
-  return { scrolled, hidden };
-}
-
-const ThemeToggle: React.FC<NavbarProps> = ({ isDarkMode, toggleTheme }) => (
-  <button
-    type="button"
-    onClick={toggleTheme}
-    aria-label={isDarkMode ? 'Activar modo claro' : 'Activar modo oscuro'}
-    className="relative flex h-9 w-9 items-center justify-center overflow-hidden rounded-xl text-slate-500 transition-colors hover:bg-slate-900/5 hover:text-slate-900 active:scale-95 dark:text-slate-400 dark:hover:bg-white/10 dark:hover:text-white"
-  >
-    <AnimatePresence mode="wait" initial={false}>
-      <motion.span
-        key={isDarkMode ? 'moon' : 'sun'}
-        initial={{ y: 14, rotate: -90, opacity: 0 }}
-        animate={{ y: 0, rotate: 0, opacity: 1 }}
-        exit={{ y: -14, rotate: 90, opacity: 0 }}
-        transition={{ duration: 0.25 }}
-      >
-        {isDarkMode ? <Moon size={18} strokeWidth={2.25} /> : <Sun size={18} strokeWidth={2.25} />}
-      </motion.span>
-    </AnimatePresence>
-  </button>
+const ThemeIcon: React.FC<{ isDarkMode: boolean; size: number }> = ({ isDarkMode, size }) => (
+  <AnimatePresence mode="wait" initial={false}>
+    <motion.span
+      key={isDarkMode ? 'moon' : 'sun'}
+      initial={{ y: 12, rotate: -90, opacity: 0 }}
+      animate={{ y: 0, rotate: 0, opacity: 1 }}
+      exit={{ y: -12, rotate: 90, opacity: 0 }}
+      transition={{ duration: 0.22 }}
+      className="flex"
+    >
+      {isDarkMode ? <Moon size={size} strokeWidth={2.25} /> : <Sun size={size} strokeWidth={2.25} />}
+    </motion.span>
+  </AnimatePresence>
 );
 
 const Navbar: React.FC<NavbarProps> = ({ isDarkMode, toggleTheme }) => {
   const { pathname } = useLocation();
-  const { scrolled, hidden } = useMainScroll(pathname);
-  const [hovered, setHovered] = useState<string | null>(null);
-
-  const activeHref = NAV_LINKS.find((l) => l.href === pathname)?.href ?? '/';
+  const activeIndex = Math.max(0, NAV_LINKS.findIndex((l) => l.href === pathname));
+  const activeHref = NAV_LINKS[activeIndex].href;
 
   /** Pulsar la pestaña de la página actual vuelve suavemente arriba */
   const handleClick = (href: string) => {
@@ -105,131 +53,129 @@ const Navbar: React.FC<NavbarProps> = ({ isDarkMode, toggleTheme }) => {
 
   return (
     <MotionConfig transition={SPRING}>
-      {/* ---------------- DESKTOP: barra flotante que se compacta al hacer scroll ---------------- */}
-      <header
-        className={`pointer-events-none fixed inset-x-0 top-0 z-50 hidden justify-center px-6 transition-[padding] duration-500 md:flex ${
-          scrolled ? 'pt-3' : 'pt-5'
-        }`}
+      {/* ---------------- ESCRITORIO: rail lateral corporativo ---------------- */}
+      <aside
+        className="fixed inset-y-0 left-0 z-50 hidden w-[88px] flex-col items-center border-r border-white/5 bg-[#002147] py-5 md:flex dark:bg-[#070d1c]"
       >
-        <div
-          className={`pointer-events-auto flex h-14 w-full items-center justify-between gap-4 rounded-2xl border px-2 backdrop-blur-xl transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-            scrolled
-              ? 'max-w-3xl border-slate-200/70 bg-white/85 shadow-[0_12px_40px_-12px_rgba(2,33,71,0.25)] dark:border-white/10 dark:bg-slate-900/85'
-              : 'max-w-6xl border-white/40 bg-white/60 shadow-[0_8px_30px_-16px_rgba(2,33,71,0.2)] dark:border-white/5 dark:bg-slate-900/60'
-          }`}
+        {/* Logo */}
+        <Link
+          to="/"
+          aria-label="Renfe · Inicio"
+          onClick={() => handleClick('/')}
+          className="block h-12 w-12 rounded-[14px] shadow-lg shadow-black/30 ring-1 ring-white/15"
         >
-          {/* Logo */}
-          <Link
-            to="/"
-            aria-label="Inicio"
-            className="flex h-10 shrink-0 items-center rounded-xl bg-[#002147] px-4 shadow-md transition-all hover:bg-[#003366] active:scale-95"
-          >
-            <img src="/renfe.svg" alt="Renfe" className="h-4 w-auto" />
-          </Link>
+          <img src="/logo.svg" alt="" className="h-12 w-12" />
+        </Link>
 
-          {/* Enlaces */}
-          <nav aria-label="Principal" onMouseLeave={() => setHovered(null)}>
-            <ul className="flex items-center gap-1">
-              {NAV_LINKS.map(({ name, Icon, href }) => {
-                const isActive = href === activeHref;
-                return (
-                  <li key={href}>
-                    <Link
-                      to={href}
-                      aria-current={isActive ? 'page' : undefined}
-                      onClick={() => handleClick(href)}
-                      onMouseEnter={() => setHovered(href)}
-                      className={`relative flex h-10 items-center gap-2 rounded-xl px-4 text-sm font-bold transition-colors duration-200 ${
-                        isActive
-                          ? 'text-white'
-                          : 'text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white'
-                      }`}
-                    >
-                      {/* Hover suave que sigue al cursor */}
-                      {hovered === href && !isActive && (
-                        <motion.span
-                          layoutId="nav-hover"
-                          className="absolute inset-0 rounded-xl bg-slate-900/5 dark:bg-white/10"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                        />
-                      )}
-                      {/* Indicador activo deslizante */}
-                      {isActive && (
-                        <motion.span
-                          layoutId="nav-active"
-                          className="absolute inset-0 rounded-xl bg-blue-600 shadow-[0_6px_16px_-6px_rgba(37,99,235,0.7)] dark:bg-blue-500"
-                        />
-                      )}
-                      <Icon size={17} strokeWidth={isActive ? 2.5 : 2.25} className="relative z-10" />
-                      <span className="relative z-10">{name}</span>
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
-          </nav>
+        <span className="my-6 h-px w-8 bg-white/10" />
 
-          {/* Acciones */}
-          <div className="flex shrink-0 items-center pr-1">
-            <ThemeToggle isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
-          </div>
-        </div>
-      </header>
-
-      {/* ---------------- MÓVIL: tab bar inferior; la pestaña activa se expande con su nombre ---------------- */}
-      <motion.nav
-        aria-label="Principal"
-        initial={false}
-        animate={{ y: hidden ? '150%' : '0%' }}
-        transition={{ type: 'spring', stiffness: 300, damping: 32 }}
-        className="fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] md:hidden"
-      >
-        <ul className="flex h-16 w-full max-w-[420px] items-center justify-between gap-1 rounded-full border border-white/40 bg-white/80 px-2 shadow-[0_18px_40px_-12px_rgba(2,33,71,0.35)] backdrop-blur-2xl dark:border-white/10 dark:bg-slate-900/85">
-          {NAV_LINKS.map(({ name, Icon, href }) => {
-            const isActive = href === activeHref;
-            return (
-              <li key={href} className={`min-w-0 ${isActive ? 'flex-[1.6]' : 'flex-1'}`} style={{ transition: 'flex 0.35s cubic-bezier(0.16,1,0.3,1)' }}>
-                <Link
-                  to={href}
-                  aria-current={isActive ? 'page' : undefined}
-                  aria-label={name}
-                  onClick={() => handleClick(href)}
-                  className="relative flex h-12 w-full items-center justify-center rounded-full outline-none"
-                >
+        {/* Navegación */}
+        <nav aria-label="Principal" className="w-full">
+          <ul className="flex flex-col items-center gap-2">
+            {NAV_LINKS.map(({ name, Icon, href }) => {
+              const isActive = href === activeHref;
+              return (
+                <li key={href} className="relative w-full px-2">
+                  {/* Indicador lateral que se desliza entre secciones */}
                   {isActive && (
                     <motion.span
-                      layoutId="mobile-active"
-                      className="absolute inset-0 rounded-full bg-blue-600 shadow-[0_8px_20px_-8px_rgba(37,99,235,0.8)] dark:bg-blue-500"
+                      layoutId="rail-indicator"
+                      className="absolute left-0 top-1/2 h-8 w-[3px] -translate-y-1/2 rounded-r-full bg-accent-400"
                     />
                   )}
-                  <motion.span
-                    whileTap={{ scale: 0.85 }}
-                    className={`relative z-10 flex items-center ${
-                      isActive ? 'text-white' : 'text-slate-500 dark:text-slate-400'
-                    }`}
+                  <Link
+                    to={href}
+                    aria-current={isActive ? 'page' : undefined}
+                    onClick={() => handleClick(href)}
+                    className="group flex w-full flex-col items-center gap-1.5 rounded-2xl py-2 outline-none focus-visible:ring-2 focus-visible:ring-accent-400"
                   >
-                    <Icon size={20} strokeWidth={2.4} />
-                    <AnimatePresence initial={false}>
-                      {isActive && (
+                    <span className="relative flex h-10 w-12 items-center justify-center">
+                      {isActive ? (
                         <motion.span
-                          initial={{ width: 0, opacity: 0, marginLeft: 0 }}
-                          animate={{ width: 'auto', opacity: 1, marginLeft: 8 }}
-                          exit={{ width: 0, opacity: 0, marginLeft: 0 }}
-                          className="overflow-hidden whitespace-nowrap text-[13px] font-bold"
-                        >
-                          {name}
-                        </motion.span>
+                          layoutId="rail-chip"
+                          className="absolute inset-0 rounded-xl bg-white shadow-md shadow-black/25"
+                        />
+                      ) : (
+                        <span className="absolute inset-0 rounded-xl bg-white/0 transition-colors duration-200 group-hover:bg-white/10" />
                       )}
-                    </AnimatePresence>
-                  </motion.span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </motion.nav>
+                      <Icon
+                        size={20}
+                        strokeWidth={isActive ? 2.5 : 2}
+                        className={`relative z-10 transition-colors duration-200 ${
+                          isActive ? 'text-[#002147]' : 'text-white/60 group-hover:text-white'
+                        }`}
+                      />
+                    </span>
+                    <span
+                      className={`text-[11px] font-bold tracking-tight transition-colors duration-200 ${
+                        isActive ? 'text-white' : 'text-white/55 group-hover:text-white/90'
+                      }`}
+                    >
+                      {name}
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+
+        {/* Tema */}
+        <button
+          type="button"
+          onClick={toggleTheme}
+          aria-label={isDarkMode ? 'Activar modo claro' : 'Activar modo oscuro'}
+          className="mt-auto flex h-11 w-11 items-center justify-center rounded-xl text-white/60 transition-colors hover:bg-white/10 hover:text-white active:scale-95"
+        >
+          <ThemeIcon isDarkMode={isDarkMode} size={19} />
+        </button>
+      </aside>
+
+      {/* ---------------- MÓVIL: tab bar flotante de cristal líquido (estilo iOS) ----------------
+          No toca el borde inferior: así Safari tiñe su barra con el fondo de la página, no con la nav. */}
+      <nav
+        aria-label="Principal"
+        className="fixed inset-x-4 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] z-50 mx-auto max-w-md md:hidden"
+      >
+        <div className="liquid-glass rounded-full p-1.5">
+          <ul className="relative flex">
+            {/* Gota bajo la pestaña activa: solo se mueve con transform (compositor, sin repintar el blur) */}
+            <span
+              aria-hidden
+              className="liquid-drop pointer-events-none absolute inset-y-0 left-0 w-1/5 rounded-full"
+              style={{ transform: `translate3d(${activeIndex * 100}%, 0, 0)` }}
+            />
+            {NAV_LINKS.map(({ name, Icon, href }) => {
+              const isActive = href === activeHref;
+              return (
+                <li key={href} className="relative min-w-0 flex-1">
+                  <Link
+                    to={href}
+                    aria-current={isActive ? 'page' : undefined}
+                    onClick={() => handleClick(href)}
+                    className="flex h-[52px] flex-col items-center justify-center gap-0.5 rounded-full outline-none transition-transform duration-150 active:scale-90"
+                  >
+                    <Icon
+                      size={21}
+                      strokeWidth={isActive ? 2.5 : 2}
+                      className={`transition-colors duration-200 ${
+                        isActive ? 'text-accent-600 dark:text-accent-400' : 'text-slate-600 dark:text-slate-300'
+                      }`}
+                    />
+                    <span
+                      className={`max-w-full truncate text-[10px] font-bold leading-tight transition-colors duration-200 ${
+                        isActive ? 'text-accent-600 dark:text-accent-400' : 'text-slate-600 dark:text-slate-300'
+                      }`}
+                    >
+                      {name}
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      </nav>
     </MotionConfig>
   );
 };

@@ -1,5 +1,8 @@
-import { ArrowRight, TrainFront } from 'lucide-react';
+import { ArrowRight, SlidersHorizontal, X } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { DateMinSelector } from '../../ui/DateMinSelector';
+import { prettyName } from '../../utils/stationUtils';
 
 interface StationInfo {
   nombre: string;
@@ -10,72 +13,64 @@ interface SearchHeaderProps {
   originDetail?: StationInfo;
   destinationDetail?: StationInfo;
   date: string;
-  count: number;
   loading: boolean;
+  editing: boolean;
   onDateChange: (newDate: string) => void;
   onEditSearch: () => void;
 }
 
+const Name = ({ station }: { station?: StationInfo }) =>
+  station ? (
+    <span>{prettyName(station.nombre)}</span>
+  ) : (
+    <span className="inline-block h-6 w-48 animate-pulse rounded-lg bg-slate-200/70 align-middle md:h-8 dark:bg-white/[0.06]" />
+  );
+
+/** Cabecera abierta (sin tarjeta): fecha, trayecto, botón de modificar y tira de días */
 export const SearchHeader = ({
   originDetail,
   destinationDetail,
   date,
-  count,
   loading,
+  editing,
   onDateChange,
-  onEditSearch
-}: SearchHeaderProps) => {
-  return (
-    /* Aplicamos el cristal y la optimización GPU aquí para que afecte a todo el conjunto */
-    <div className="sticky top-0 z-40 w-full transform-gpu bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl border-b border-slate-200 dark:border-white/5 shadow-sm">
-      
-      {/* 1. Header Estaciones (Sin fondo propio) */}
-      <header className="max-w-6xl mx-auto h-16 md:h-24 px-4 flex items-center justify-between gap-2">
-        <button 
-          type="button"
-          onClick={onEditSearch} 
-          className="flex items-center gap-2 md:gap-4 min-w-0 group flex-1"
-        >
-          <div className="flex items-center gap-2 md:gap-4 text-slate-900 dark:text-white min-w-0">
-            {/* Origen */}
-            <div className="flex flex-col items-start text-left min-w-0 max-w-[85px] sm:max-w-[120px] md:max-w-[160px] min-h-[34px] justify-center">
-              <span className="text-[12px] md:text-[14px] font-black uppercase tracking-tighter leading-[1.1] line-clamp-2 group-hover:text-blue-500 transition-colors">
-                {originDetail?.nombre || '...'}
-              </span>
-              <span className="text-[9px] font-bold opacity-40 uppercase tracking-tighter truncate w-full">
-                {originDetail?.provincia || '...'}
-              </span>
-            </div>
+  onEditSearch,
+}: SearchHeaderProps) => (
+  <header className="space-y-6">
+    <div className="flex items-start justify-between gap-4">
+      <div className="min-w-0 space-y-2">
+        <p className="text-[13px] font-bold text-accent-600 first-letter:uppercase dark:text-accent-400">
+          {format(parseISO(date), "EEEE, d 'de' MMMM", { locale: es })}
+        </p>
+        <h1 className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xl font-black leading-tight tracking-tight text-slate-900 md:text-3xl dark:text-white">
+          <Name station={originDetail} />
+          <ArrowRight className="h-5 w-5 shrink-0 text-slate-300 md:h-7 md:w-7 dark:text-slate-600" strokeWidth={2.5} />
+          <Name station={destinationDetail} />
+        </h1>
+        {originDetail && destinationDetail && (
+          <p className="text-sm text-slate-500 dark:text-slate-400">
+            {prettyName(originDetail.provincia)} · {prettyName(destinationDetail.provincia)}
+          </p>
+        )}
+      </div>
 
-            <ArrowRight size={14} className="text-blue-500 shrink-0 opacity-70 group-hover:translate-x-1 transition-transform" />
-
-            {/* Destino */}
-            <div className="flex flex-col items-start text-left min-w-0 max-w-[85px] sm:max-w-[120px] md:max-w-[160px] min-h-[34px] justify-center">
-              <span className="text-[12px] md:text-[14px] font-black uppercase tracking-tighter leading-[1.1] line-clamp-2 group-hover:text-blue-500 transition-colors">
-                {destinationDetail?.nombre || '...'}
-              </span>
-              <span className="text-[9px] font-bold opacity-40 uppercase tracking-tighter truncate w-full">
-                {destinationDetail?.provincia || '...'}
-              </span>
-            </div>
-          </div>
-        </button>
-
-        {/* Badge Trenes */}
-        <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-full shrink-0">
-          <TrainFront size={13} className={`text-blue-500 ${loading ? 'animate-pulse' : ''}`} />
-          <span className="text-[10px] font-black dark:text-blue-400 tabular-nums uppercase">
-            {loading ? '...' : `${count} Trenes`}
-          </span>
-        </div>
-      </header>
-
-      {/* 2. Selector de Fechas (Integrado sin bordes extra) */}
-      <DateMinSelector 
-        date={date} 
-        loading={loading} 
-        onDateChange={onDateChange} 
-      />
+      <button
+        type="button"
+        onClick={onEditSearch}
+        aria-expanded={editing}
+        className={`flex h-10 shrink-0 items-center gap-2 rounded-full px-3 text-[13px] font-bold transition-colors active:scale-95 md:px-4 ${
+          editing
+            ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
+            : 'border border-slate-200 text-slate-700 hover:bg-slate-100 dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/[0.06]'
+        }`}
+      >
+        {editing ? <X size={15} strokeWidth={2.5} /> : <SlidersHorizontal size={15} strokeWidth={2.5} />}
+        <span className="hidden sm:inline">{editing ? 'Cerrar' : 'Modificar'}</span>
+      </button>
     </div>
-  );
-};
+
+    <div className="border-y border-slate-200/80 py-2 dark:border-white/[0.07]">
+      <DateMinSelector date={date} loading={loading} onDateChange={onDateChange} />
+    </div>
+  </header>
+);

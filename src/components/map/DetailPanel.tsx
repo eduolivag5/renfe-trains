@@ -81,22 +81,22 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ train, onClose }) => {
 
   return (
     <motion.div
-      initial={{ y: '150%' }} 
-      animate={{ y: 0 }}
-      exit={{ y: '150%' }}
-      transition={{ type: 'spring', damping: 30, stiffness: 320, mass: 0.85 }}
-      className="absolute bottom-24 md:bottom-6 left-0 right-0 z-50 px-3 pointer-events-none"
+      // Aparece desde abajo con un recorrido corto y frenada suave (sin rebote); al cerrar, se desvanece bajando un poco
+      initial={{ opacity: 0, y: 48 }}
+      animate={{ opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] } }}
+      exit={{ opacity: 0, y: 24, transition: { duration: 0.2, ease: [0.4, 0, 1, 1] } }}
+      className="absolute bottom-[calc(env(safe-area-inset-bottom)+5.25rem)] md:bottom-6 left-0 right-0 z-50 px-3 pointer-events-none"
     >
       <div className={`
         mx-auto max-w-lg rounded-[26px] pointer-events-auto overflow-hidden
         shadow-[0_-8px_48px_rgba(0,0,0,0.28)] backdrop-blur-2xl
-        bg-white/97 border border-indigo-50
-        dark:bg-[#0d0d1f]/96 dark:border-violet-500/15
+        bg-white/97 border border-accent-50
+        dark:bg-[#0d0d1f]/96 dark:border-accent-500/15
       `}>
         <div className="h-[3px]" style={{ background: `linear-gradient(90deg, ${accent}, ${accent}88, transparent)` }} />
         
         <div className="flex justify-center pt-2.5">
-          <div className="w-9 h-[3px] rounded-full bg-indigo-200/70 dark:bg-violet-500/25" />
+          <div className="w-9 h-[3px] rounded-full bg-accent-200/70 dark:bg-accent-500/25" />
         </div>
 
         <div className="px-5 pt-3 pb-5 space-y-3">
@@ -157,19 +157,19 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ train, onClose }) => {
                 </span>
               </div>
               )}
-              <h2 className="text-[22px] font-black tracking-tight leading-none truncate text-indigo-950 dark:text-white">
+              <h2 className="text-[22px] font-black tracking-tight leading-none truncate text-accent-950 dark:text-white">
                 {train.label}
               </h2>
             </div>
             <button 
               onClick={onClose} 
-              className="ml-3 p-2 rounded-full transition-all text-slate-400 hover:text-indigo-900 hover:bg-indigo-50 dark:text-slate-500 dark:hover:text-white dark:hover:bg-white/10"
+              className="ml-3 p-2 rounded-full transition-all text-slate-400 hover:text-accent-900 hover:bg-accent-50 dark:text-slate-500 dark:hover:text-white dark:hover:bg-white/10"
             >
               <X size={16} />
             </button>
           </div>
 
-          <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl font-mono text-[12px] tracking-wider bg-indigo-50 border border-indigo-100 text-indigo-400 dark:bg-violet-500/[0.07] dark:border-violet-500/[0.12] dark:text-violet-300">
+          <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl font-mono text-[12px] tracking-wider bg-accent-50 border border-accent-100 text-accent-400 dark:bg-accent-500/[0.07] dark:border-accent-500/[0.12] dark:text-accent-300">
             <Navigation2 size={12} style={{ color: accent }} className="shrink-0" />
             {train.lat.toFixed(5)}°N &nbsp; {Math.abs(train.lon).toFixed(5)}°W
           </div>
@@ -213,7 +213,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ train, onClose }) => {
                 {/* Botón secundario: Ahora es un acceso directo de scroll elegante */}
                 <button
                   onClick={scrollToTop}
-                  className="mx-auto text-[11px] font-semibold text-slate-500 hover:text-indigo-600 dark:text-slate-400 dark:hover:text-violet-400 flex items-center gap-1 py-1 px-3 rounded-full hover:bg-slate-100 dark:hover:bg-white/5 transition-colors mt-1"
+                  className="mx-auto text-[11px] font-semibold text-slate-500 hover:text-accent-600 dark:text-slate-400 dark:hover:text-accent-400 flex items-center gap-1 py-1 px-3 rounded-full hover:bg-slate-100 dark:hover:bg-white/5 transition-colors mt-1"
                 >
                   <Eye size={12} />
                   Ir al origen del trayecto
@@ -233,7 +233,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ train, onClose }) => {
               w-full py-3.5 rounded-[13px] font-bold text-[13px] tracking-wide 
               flex items-center justify-center gap-2 transition-all duration-150 active:scale-[0.98] disabled:opacity-50
               ${loading || showItinerary 
-                ? 'bg-indigo-50 text-indigo-400 border border-indigo-100 dark:bg-violet-500/10 dark:text-violet-400 dark:border-violet-500/15' 
+                ? 'bg-accent-50 text-accent-400 border border-accent-100 dark:bg-accent-500/10 dark:text-accent-400 dark:border-accent-500/15' 
                 : 'text-white'
               }
             `}

@@ -130,7 +130,7 @@ const TrainFamilies: React.FC = () => (
   <section className="space-y-16">
     {/* Cabecera */}
     <div className="max-w-2xl space-y-4">
-      <div className="inline-flex items-center gap-2 rounded-full bg-blue-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400">
+      <div className="inline-flex items-center gap-2 rounded-full bg-accent-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-accent-600 dark:text-accent-400">
         <TrainFront size={14} /> Nuestros trenes
       </div>
       <h2 className="text-3xl font-black leading-none tracking-tighter text-slate-900 dark:text-white md:text-5xl lg:leading-[1.1]">

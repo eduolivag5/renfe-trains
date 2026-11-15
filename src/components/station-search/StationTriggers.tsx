@@ -1,34 +1,51 @@
-import { motion } from 'framer-motion';
-import { MapPin, Navigation2, Calendar as CalendarIcon } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { prettyName, type Estacion } from '../../utils/stationUtils';
 
-export const StationTrigger = ({ icon, label, value, placeholder, onClick }: {
-  icon: 'origin' | 'destination'; label: string; value?: string; placeholder: string; onClick: () => void;
-}) => (
-  <button onClick={onClick}
-    className="flex-1 flex items-center gap-2.5 py-3 px-2 rounded-xl text-left transition-colors active:bg-slate-50 dark:active:bg-white/5">
-    <span className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${icon === 'origin' ? 'bg-blue-50 dark:bg-blue-500/15' : 'bg-orange-50 dark:bg-orange-500/15'}`}>
-      {icon === 'origin'
-        ? <MapPin size={13} className="text-blue-500" />
-        : <Navigation2 size={13} className="text-orange-400" />}
-    </span>
-    <span>
-      <span className="block text-[9.5px] font-semibold uppercase tracking-[0.06em] text-slate-400 dark:text-slate-500">{label}</span>
-      <span className={`block text-[15px] font-semibold leading-tight mt-0.5 ${value ? 'text-slate-800 dark:text-white' : 'text-slate-300 dark:text-slate-600'}`}>
-        {value || placeholder}
-      </span>
-    </span>
+const FIELD = 'flex w-full flex-col items-start rounded-2xl px-4 py-3 text-left transition-colors';
+const fieldState = (active: boolean) =>
+  active ? 'bg-slate-100 dark:bg-white/[0.06]' : 'hover:bg-slate-50 dark:hover:bg-white/[0.03]';
+const LABEL = 'text-[12px] font-semibold text-slate-400 dark:text-slate-500';
+
+interface StationFieldProps {
+  kind: 'origin' | 'destination';
+  station: Estacion | null;
+  active: boolean;
+  onClick: () => void;
+}
+
+/** Campo de estación: solo etiqueta y nombre */
+export const StationField = ({ kind, station, active, onClick }: StationFieldProps) => (
+  <button type="button" onClick={onClick} aria-expanded={active} className={`${FIELD} ${fieldState(active)}`}>
+    <span className={LABEL}>{kind === 'origin' ? 'Origen' : 'Destino'}</span>
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.span
+        key={station?.codigo ?? 'empty'}
+        initial={{ opacity: 0, y: 4 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -4 }}
+        transition={{ duration: 0.14 }}
+        className={`block w-full truncate text-[16px] font-bold leading-snug ${
+          station ? 'text-slate-900 dark:text-white' : 'text-slate-300 dark:text-slate-600'
+        }`}
+      >
+        {station ? prettyName(station.nombre) : 'Elige estación'}
+      </motion.span>
+    </AnimatePresence>
   </button>
 );
 
-export const DateTrigger = ({ label, date, active, disabled, onClick }: {
-  label: string; date: string; active: boolean; disabled?: boolean; onClick: () => void;
-}) => (
-  <motion.button animate={{ opacity: disabled ? 0.35 : 1 }} disabled={disabled} onClick={onClick}
-    className="flex-1 flex items-center gap-2 px-4 py-3 text-left transition-colors">
-    <CalendarIcon size={14} className={`shrink-0 ${active ? 'text-blue-500' : 'text-slate-300 dark:text-slate-600'}`} />
-    <span>
-      <span className="block text-[9.5px] font-semibold uppercase tracking-[0.06em] text-slate-400 dark:text-slate-500">{label}</span>
-      <span className={`block text-sm font-semibold mt-0.5 ${active ? 'text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-600'}`}>{date}</span>
+interface DateFieldProps {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}
+
+/** Campo de fecha: etiqueta y fecha en una línea */
+export const DateField = ({ label, active, onClick }: DateFieldProps) => (
+  <button type="button" onClick={onClick} aria-expanded={active} className={`${FIELD} ${fieldState(active)}`}>
+    <span className={LABEL}>Fecha</span>
+    <span className="block w-full truncate text-[16px] font-bold leading-snug text-slate-900 first-letter:uppercase dark:text-white">
+      {label}
     </span>
-  </motion.button>
+  </button>
 );

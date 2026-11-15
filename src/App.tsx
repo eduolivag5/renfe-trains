@@ -5,11 +5,12 @@ import Navbar from './ui/Navbar';
 import HomePage from './pages/HomePage';
 import SearchResultsPage from './pages/SearchResultsPage';
 import TrainsPage from './pages/TrainsPage';
+import { clearPrefs, getPref, setPref, systemPrefersDark } from './utils/preferences';
 
 // El mapa (d3 + geometría) va en su propio chunk: solo se descarga al abrir /mapa
 const MapsPage = lazy(() => import('./pages/MapsPage'));
 
-function AppContent({ isDarkMode, toggleTheme }: { isDarkMode: boolean, toggleTheme: () => void }) {
+function AppContent({ isDarkMode, toggleTheme, resetPreferences }: { isDarkMode: boolean; toggleTheme: () => void; resetPreferences: () => void }) {
   const location = useLocation();
   const isMapPath = useMemo(() => location.pathname === '/mapa', [location.pathname]);
   const isHome = useMemo(() => location.pathname === '/', [location.pathname]);
@@ -18,11 +19,12 @@ function AppContent({ isDarkMode, toggleTheme }: { isDarkMode: boolean, toggleTh
     <div className="relative h-[100dvh] w-full bg-slate-50 dark:bg-slate-950 overflow-hidden">
       <Navbar isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
       
-      <div className="relative h-full w-full flex flex-col">
+      {/* En escritorio se reserva el ancho del rail lateral (88px) */}
+      <div className="relative h-full w-full flex flex-col md:pl-[88px]">
         {/* Capa del Mapa */}
         {/* Solo se monta en /mapa: fuera de esa ruta no consume CPU ni hace peticiones */}
         {isMapPath && (
-          <div className="absolute inset-0 z-0 animate-[fadeIn_0.4s_ease-out]">
+          <div className="absolute inset-0 md:left-[88px] z-0 animate-[fadeIn_0.4s_ease-out]">
             <Suspense fallback={null}>
               <MapsPage isDarkMode={isDarkMode} />
             </Suspense>
@@ -32,11 +34,11 @@ function AppContent({ isDarkMode, toggleTheme }: { isDarkMode: boolean, toggleTh
         {/* Contenido Principal */}
         <main className={`relative z-10 h-full overflow-y-auto transition-all duration-500 ${isMapPath ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}>
           {/* Quitamos el padding global aquí y lo manejamos por ruta */}
-          <div className={`w-full mx-auto ${isHome ? '' : 'px-6 max-w-7xl pt-10 md:pt-24 pb-28 md:pb-10'}`}>
+          <div className={`w-full mx-auto ${isHome ? '' : 'px-6 max-w-7xl pt-10 md:pt-14 pb-28 md:pb-10'}`}>
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/mapa" element={null} /> 
-              <Route path="/ajustes" element={<SettingsPage isDarkMode={isDarkMode} toggleTheme={toggleTheme} />} />
+              <Route path="/ajustes" element={<SettingsPage isDarkMode={isDarkMode} toggleTheme={toggleTheme} onReset={resetPreferences} />} />
               <Route path="/trenes" element={<TrainsPage />} />
               <Route path="/buscar" element={<SearchResultsPage />} />
             </Routes>
@@ -48,11 +50,23 @@ function AppContent({ isDarkMode, toggleTheme }: { isDarkMode: boolean, toggleTh
 }
 
 function App() {
+  // Tema guardado por el visitante o, si no eligió ninguno, el del sistema
   const [isDarkMode, setIsDarkMode] = useState(() => {
-    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const saved = getPref('theme');
+    return saved ? saved === 'dark' : systemPrefersDark();
   });
 
-  const toggleTheme = () => setIsDarkMode(!isDarkMode);
+  const toggleTheme = () => {
+    const next = !isDarkMode;
+    setPref('theme', next ? 'dark' : 'light');
+    setIsDarkMode(next);
+  };
+
+  /** Restablece todas las preferencias (el tema vuelve a seguir al sistema) */
+  const resetPreferences = () => {
+    clearPrefs();
+    setIsDarkMode(systemPrefersDark());
+  };
 
   useEffect(() => {
     const root = window.document.documentElement;
@@ -71,7 +85,7 @@ function App() {
 
   return (
     <Router>
-      <AppContent isDarkMode={isDarkMode} toggleTheme={toggleTheme} />
+      <AppContent isDarkMode={isDarkMode} toggleTheme={toggleTheme} resetPreferences={resetPreferences} />
     </Router>
   );
 }

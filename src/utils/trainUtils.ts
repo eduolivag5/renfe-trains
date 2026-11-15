@@ -102,3 +102,15 @@ export const processTrainData =(trains: any[]) => {
     isFastest: t.durationMin === minDur && withDuration.length > 1
   }));
 };
+/** "HH:mm[:ss]" → minutos desde medianoche (GTFS admite horas ≥ 24) */
+export const timeToMinutes = (t: string) => {
+  const [h, m] = t.split(':').map(Number);
+  return h * 60 + m;
+};
+
+/** 197 → "3 h 17 min" */
+export const formatDuration = (min: number) => {
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return h ? `${h} h${m ? ` ${m} min` : ''}` : `${m} min`;
+};

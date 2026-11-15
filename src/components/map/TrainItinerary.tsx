@@ -9,13 +9,13 @@ interface TrainItineraryProps {
 
 const TrainItinerary: React.FC<TrainItineraryProps> = ({ itinerary, accent }) => {
   return (
-    <div className="rounded-xl overflow-hidden border border-indigo-50 dark:border-violet-500/10">
+    <div className="rounded-xl overflow-hidden border border-accent-50 dark:border-accent-500/10">
       {itinerary.slice(0, 9).map((stop, i) => (
         <div 
           key={i} 
           className={`flex items-center gap-3 px-3.5 py-[9px] text-[12px] 
             ${i % 2 === 0 
-              ? 'bg-indigo-50/60 dark:bg-white/[0.03]' 
+              ? 'bg-accent-50/60 dark:bg-white/[0.03]' 
               : 'bg-white dark:bg-transparent'
             }`}
         >
@@ -44,13 +44,13 @@ const TrainItinerary: React.FC<TrainItineraryProps> = ({ itinerary, accent }) =>
           <span className={`flex-1 font-medium truncate ${
             stop.isPassed 
               ? 'text-slate-500 dark:text-slate-400' 
-              : 'text-indigo-900 dark:text-violet-100'
+              : 'text-accent-900 dark:text-accent-100'
           }`}>
             {stop.stopName}
           </span>
           
           {/* Horario */}
-          <span className="font-mono tabular-nums shrink-0 text-[11px] text-indigo-300 dark:text-violet-400">
+          <span className="font-mono tabular-nums shrink-0 text-[11px] text-accent-300 dark:text-accent-400">
             {stop.actualArrival || stop.scheduledArrival}
           </span>
         </div>

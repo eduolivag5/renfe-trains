@@ -1,12 +1,18 @@
-import { useState, useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import {
-  format, addMonths, subMonths,
-  startOfMonth, endOfMonth,
-  startOfWeek, endOfWeek,
-  isSameMonth, isSameDay, isBefore,
-  startOfToday, eachDayOfInterval
+  addDays,
+  addMonths,
+  format,
+  isBefore,
+  isSameDay,
+  isSameMonth,
+  isWeekend,
+  nextSaturday,
+  startOfMonth,
+  startOfToday,
+  startOfWeek,
 } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -18,90 +24,157 @@ interface CustomCalendarProps {
 
 const DAY_NAMES = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
+/**
+ * Calendario de un mes con rejilla fija de 6 semanas (la altura no salta al cambiar de mes),
+ * accesos rápidos y animación de deslizamiento entre meses.
+ */
 const CustomCalendar = ({ selectedDate, onDateSelect, minDate = startOfToday() }: CustomCalendarProps) => {
-  const [currentMonth, setCurrentMonth] = useState(selectedDate ?? new Date());
+  const [month, setMonth] = useState(() => startOfMonth(selectedDate ?? minDate));
   const [direction, setDirection] = useState(0);
 
-  const nextMonth = () => { setDirection(1); setCurrentMonth(m => addMonths(m, 1)); };
-  const prevMonth = () => { setDirection(-1); setCurrentMonth(m => subMonths(m, 1)); };
+  const canGoBack = isBefore(startOfMonth(minDate), month);
+
+  const goTo = (target: Date) => {
+    const m = startOfMonth(target);
+    setDirection(m > month ? 1 : m < month ? -1 : 0);
+    setMonth(m);
+  };
 
   const days = useMemo(() => {
-    const start = startOfWeek(startOfMonth(currentMonth), { weekStartsOn: 1 });
-    const end = endOfWeek(endOfMonth(currentMonth), { weekStartsOn: 1 });
-    return eachDayOfInterval({ start, end });
-  }, [currentMonth]);
+    const start = startOfWeek(month, { weekStartsOn: 1 });
+    return Array.from({ length: 42 }, (_, i) => addDays(start, i));
+  }, [month]);
+
+  const today = startOfToday();
+  const quickPicks = [
+    { label: 'Hoy', date: today },
+    { label: 'Mañana', date: addDays(today, 1) },
+    { label: 'Sábado', date: nextSaturday(today) },
+  ];
+
+  const pick = (d: Date) => {
+    if (!isSameMonth(d, month)) goTo(d);
+    onDateSelect(d);
+  };
 
   return (
-    <div className="w-full select-none mb-4">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4">
-        <span className="text-[14px] font-semibold text-slate-800 dark:text-white first-letter:uppercase">
-          {format(currentMonth, 'MMMM yyyy', { locale: es })}
-        </span>
-        <div className="flex gap-1">
+    <div className="w-full select-none">
+      {/* Cabecera del mes */}
+      <div className="mb-4 flex items-center justify-between">
+        <div className="flex items-baseline gap-2">
+          <span className="text-lg font-black capitalize tracking-tight text-slate-900 dark:text-white">
+            {format(month, 'MMMM', { locale: es })}
+          </span>
+          <span className="text-sm font-semibold text-slate-400 dark:text-slate-500">{format(month, 'yyyy')}</span>
+        </div>
+        <div className="flex gap-1.5">
           <button
-            onClick={prevMonth}
-            className="w-7 h-7 rounded-full bg-slate-100 dark:bg-white/[0.07] flex items-center justify-center text-slate-400 transition-colors active:bg-slate-200 dark:active:bg-white/[0.12]"
+            type="button"
+            aria-label="Mes anterior"
+            disabled={!canGoBack}
+            onClick={() => goTo(addMonths(month, -1))}
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition-all hover:bg-slate-50 active:scale-95 disabled:pointer-events-none disabled:opacity-30 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
           >
-            <ChevronLeft size={14} />
+            <ChevronLeft size={16} strokeWidth={2.5} />
           </button>
           <button
-            onClick={nextMonth}
-            className="w-7 h-7 rounded-full bg-slate-100 dark:bg-white/[0.07] flex items-center justify-center text-slate-400 transition-colors active:bg-slate-200 dark:active:bg-white/[0.12]"
+            type="button"
+            aria-label="Mes siguiente"
+            onClick={() => goTo(addMonths(month, 1))}
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition-all hover:bg-slate-50 active:scale-95 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
           >
-            <ChevronRight size={14} />
+            <ChevronRight size={16} strokeWidth={2.5} />
           </button>
         </div>
       </div>
 
-      {/* Day names */}
-      <div className="grid grid-cols-7 mb-1">
-        {DAY_NAMES.map((d) => (
-          <div key={d} className="text-[10.5px] font-semibold text-slate-400 dark:text-slate-500 text-center py-1">
+      {/* Días de la semana */}
+      <div className="mb-1 grid grid-cols-7">
+        {DAY_NAMES.map((d, i) => (
+          <div
+            key={d}
+            className={`py-1 text-center text-[11px] font-bold ${
+              i >= 5 ? 'text-accent-500/70 dark:text-accent-400/70' : 'text-slate-400 dark:text-slate-500'
+            }`}
+          >
             {d}
           </div>
         ))}
       </div>
 
-      {/* Grid */}
-      <div className="overflow-hidden">
-        <AnimatePresence mode="wait" custom={direction}>
+      {/* Rejilla */}
+      <div className="relative overflow-hidden">
+        <AnimatePresence mode="popLayout" initial={false} custom={direction}>
           <motion.div
-            key={currentMonth.toISOString()}
+            key={month.toISOString()}
             custom={direction}
-            initial={{ opacity: 0, x: direction * 12 }}
+            initial={{ opacity: 0, x: direction * 24 }}
             animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: direction * -12 }}
-            transition={{ duration: 0.18, ease: [0.25, 0.1, 0.25, 1] }}
-            className="grid grid-cols-7"
+            exit={{ opacity: 0, x: direction * -24 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            className="grid grid-cols-7 gap-y-1"
           >
             {days.map((day) => {
-              const isOutside = !isSameMonth(day, currentMonth);
-              const isDisabled = isOutside || isBefore(day, minDate);
-              const isSelected = selectedDate ? isSameDay(day, selectedDate) : false;
-              const isToday = isSameDay(day, new Date());
+              const inMonth = isSameMonth(day, month);
+              const disabled = isBefore(day, minDate);
+              const selected = !!selectedDate && isSameDay(day, selectedDate);
+              const isToday = isSameDay(day, today);
+
+              if (!inMonth) return <span key={day.toISOString()} className="h-10" aria-hidden />;
 
               return (
                 <button
                   key={day.toISOString()}
-                  disabled={isDisabled}
-                  onClick={() => onDateSelect(day)}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => pick(day)}
+                  aria-pressed={selected}
+                  aria-label={format(day, "EEEE d 'de' MMMM", { locale: es })}
                   className={[
-                    'relative h-9 w-full flex items-center justify-center rounded-full text-[13.5px] transition-all duration-150',
-                    isDisabled ? 'text-slate-200 dark:text-slate-800 pointer-events-none' : 'text-slate-600 dark:text-slate-300 active:bg-slate-100 dark:active:bg-white/[0.08]',
-                    isSelected ? '!bg-blue-600 !text-white font-semibold shadow-[0_2px_8px_rgba(0,122,255,0.35)]' : '',
-                    isToday && !isSelected ? 'font-semibold text-blue-600 dark:text-blue-400' : '',
+                    'relative mx-auto flex h-10 w-10 items-center justify-center rounded-xl text-[14px] font-semibold tabular-nums transition-all duration-150',
+                    disabled
+                      ? 'cursor-default text-slate-300 dark:text-slate-700'
+                      : selected
+                        ? 'bg-accent-600 font-bold text-white shadow-[0_6px_16px_-6px_rgba(124,58,237,0.8)] dark:bg-accent-500'
+                        : `hover:bg-slate-100 active:scale-90 dark:hover:bg-white/[0.07] ${
+                            isWeekend(day) ? 'text-accent-600/90 dark:text-accent-300' : 'text-slate-700 dark:text-slate-200'
+                          }`,
+                    isToday && !selected ? 'ring-1 ring-inset ring-accent-500/50' : '',
                   ].join(' ')}
                 >
                   {format(day, 'd')}
-                  {isToday && !isSelected && (
-                    <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-[3px] h-[3px] rounded-full bg-blue-500" />
+                  {isToday && !selected && (
+                    <span className="absolute bottom-1 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-accent-500" />
                   )}
                 </button>
               );
             })}
           </motion.div>
         </AnimatePresence>
+      </div>
+
+      {/* Accesos rápidos */}
+      <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-100 pt-4 dark:border-white/[0.07]">
+        {quickPicks.map(({ label, date }) => {
+          const active = !!selectedDate && isSameDay(date, selectedDate);
+          return (
+            <button
+              key={label}
+              type="button"
+              onClick={() => pick(date)}
+              className={`rounded-full px-3.5 py-1.5 text-[12px] font-bold transition-colors active:scale-95 ${
+                active
+                  ? 'bg-accent-600 text-white dark:bg-accent-500'
+                  : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/[0.06] dark:text-slate-300 dark:hover:bg-white/10'
+              }`}
+            >
+              {label}
+              <span className={`ml-1.5 font-semibold ${active ? 'text-accent-100' : 'text-slate-400 dark:text-slate-500'}`}>
+                {format(date, 'd MMM', { locale: es })}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
