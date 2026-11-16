@@ -144,7 +144,7 @@ const ThemeOption: React.FC<{ dark: boolean; selected: boolean; onSelect: () => 
     role="radio"
     aria-checked={selected}
     onClick={onSelect}
-    className={`group relative flex flex-col gap-3 rounded-[22px] border-2 p-2.5 text-left transition-all duration-200 active:scale-[0.98] ${
+    className={`group relative flex flex-col gap-3 rounded-[22px] border-2 p-2.5 text-left transition duration-200 active:scale-[0.98] ${
       selected
         ? 'border-accent-600 bg-accent-50/60 dark:border-accent-500 dark:bg-accent-500/10'
         : 'border-transparent bg-slate-50 hover:border-slate-200 dark:bg-white/[0.03] dark:hover:border-white/10'
@@ -157,7 +157,7 @@ const ThemeOption: React.FC<{ dark: boolean; selected: boolean; onSelect: () => 
         {dark ? 'Oscuro' : 'Claro'}
       </span>
       <span
-        className={`flex h-5 w-5 items-center justify-center rounded-full transition-all ${
+        className={`flex h-5 w-5 items-center justify-center rounded-full transition ${
           selected ? 'scale-100 bg-accent-600 text-white dark:bg-accent-500' : 'scale-90 border-2 border-slate-300 dark:border-white/20'
         }`}
       >
@@ -192,7 +192,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ isDarkMode, toggleTheme, on
   };
 
   return (
-    <motion.div variants={container} initial="hidden" animate="show" className="mx-auto max-w-3xl space-y-10 pb-12">
+    <motion.div variants={container} initial="hidden" animate="show" className="space-y-10 pb-12">
       {/* Cabecera */}
       <motion.header variants={item} className="max-w-2xl space-y-4">
         <div className="inline-flex items-center gap-2 rounded-full bg-accent-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-accent-600 dark:text-accent-400">
@@ -206,6 +206,8 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ isDarkMode, toggleTheme, on
         </p>
       </motion.header>
 
+      {/* Secciones: dos columnas en pantallas anchas, mismo ancho máximo que el resto de páginas */}
+      <div className="grid items-start gap-10 lg:grid-cols-2 lg:gap-x-8 [&>*]:min-w-0">
       {/* Apariencia */}
       <motion.section variants={item} className="space-y-3">
         <div className="px-1">
@@ -291,6 +293,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ isDarkMode, toggleTheme, on
           </button>
         </Row>
       </Section>
+      </div>
     </motion.div>
   );
 };

@@ -27,7 +27,7 @@ const CARD =
 /* ------------------------------------------------------------------ */
 
 const SearchLanding = () => (
-    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="mx-auto max-w-5xl space-y-12 pb-12">
+    <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-12 pb-12">
       <header className="max-w-2xl space-y-4">
         <div className="inline-flex items-center gap-2 rounded-full bg-accent-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-accent-600 dark:text-accent-400">
           <Search size={14} /> Buscar
@@ -119,7 +119,7 @@ const SearchResultsPage = () => {
   const stationsReady = !!(stations.origin && stations.destination);
 
   return (
-    <div className="mx-auto max-w-4xl space-y-5 pb-12">
+    <div className="space-y-5 pb-12">
       {/* Resumen del trayecto (fijo arriba en escritorio) */}
       <div>
         <SearchHeader
@@ -158,10 +158,10 @@ const SearchResultsPage = () => {
 
       {/* Resultados */}
       <div
-        className="grid gap-3"
+        className="flex min-w-0 flex-col gap-3"
       >
         {loading ? (
-          <div className="space-y-2.5">{Array.from({ length: 6 }).map((_, i) => <TrainSkeleton key={i} />)}</div>
+          <div className="grid gap-2.5 2xl:grid-cols-2">{Array.from({ length: 6 }).map((_, i) => <TrainSkeleton key={i} />)}</div>
         ) : processedTrains.length > 0 ? (
           <TrainResults trains={processedTrains} date={date!} onNextDay={() => handleDateChange(nextDay)} />
         ) : (

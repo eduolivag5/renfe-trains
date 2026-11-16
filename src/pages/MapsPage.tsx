@@ -58,7 +58,7 @@ const MapsPage: React.FC<{ isDarkMode: boolean }> = ({ isDarkMode }) => {
       />
 
       {/* Controles de zoom */}
-      <div className="absolute right-4 top-4 z-40 flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white/80 shadow-xl backdrop-blur-md divide-y divide-slate-200 md:right-6 md:top-6 dark:border-white/10 dark:bg-slate-900/80 dark:divide-white/10">
+      <div className="absolute right-4 top-4 z-40 flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white/95 shadow-xl divide-y divide-slate-200 md:right-6 md:top-6 dark:border-white/10 dark:bg-slate-900/95 dark:divide-white/10">
         <ZoomButton label="Acercar" onClick={() => mapRef.current?.zoomIn()}>
           <Plus size={18} strokeWidth={2.5} />
         </ZoomButton>

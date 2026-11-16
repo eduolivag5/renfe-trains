@@ -80,7 +80,7 @@ const TrainFaq = () => {
                   {q}
                 </span>
                 <span
-                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition-all duration-300 ${
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border transition duration-300 ${
                     isOpen
                       ? 'rotate-45 border-accent-600 bg-accent-600 text-white dark:border-accent-500 dark:bg-accent-500'
                       : 'border-slate-200 text-slate-400 group-hover:border-accent-600 group-hover:text-accent-600 dark:border-white/10 dark:text-slate-500'

@@ -22,6 +22,9 @@ export interface StopDetail {
 }
 
 export interface TrainDetail extends TrainMap {
+  /** Hoy la API devuelve aquí el nº de tren (o null); en el futuro, el route_id GTFS */
+  routeId?: string | null;
+  delayMinutes?: number | null;
   routeName: string;
   color: string;
   itinerary: StopDetail[];

@@ -69,7 +69,7 @@ export const LiveCounter: React.FC<LiveCounterProps> = ({ trains }) => {
       layout
       transition={{ layout: { duration: 0.45, ease: [0.16, 1, 0.3, 1] } }}
       style={{ borderRadius: 24 }}
-      className={`absolute left-4 top-4 z-40 select-none overflow-hidden border border-slate-200/80 bg-white/85 shadow-[0_16px_40px_-16px_rgba(2,33,71,0.35)] backdrop-blur-md md:left-6 md:top-6 dark:border-white/10 dark:bg-slate-900/85 dark:shadow-none ${
+      className={`absolute left-4 top-4 z-40 select-none overflow-hidden border border-slate-200/80 bg-white/95 shadow-[0_16px_40px_-16px_rgba(2,33,71,0.35)] md:left-6 md:top-6 dark:border-white/10 dark:bg-slate-900/95 dark:shadow-none ${
         hidden ? '' : 'pointer-events-none w-[calc(100vw-6rem)] max-w-[290px]'
       }`}
     >

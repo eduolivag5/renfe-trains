@@ -1,10 +1,12 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { X, Navigation2, ChevronDown, ChevronUp, Loader2, AlertCircle, Radio, Eye } from 'lucide-react';
 import { trainsService, type TrainMap, type TrainDetail } from '../../api/trainsService';
 import { COLORS } from './MapConstants';
 import TrainItinerary from './TrainItinerary';
 import { getMapTrainInfo, isRodalies } from '../../utils/trainUtils';
+import { useTrainAlerts } from '../../hooks/useTrainAlerts';
+import { AlertsButton, AlertsList } from '../alerts/TrainAlerts';
 
 interface DetailPanelProps {
   train: TrainMap;
@@ -19,6 +21,9 @@ const STATUS_LABELS: Record<string, string> = {
 
 const DetailPanel: React.FC<DetailPanelProps> = ({ train, onClose }) => {
   const [detail, setDetail] = useState<TrainDetail | null>(null);
+  // Avisos de la línea del tren (icono junto a cerrar; lista desplegable bajo la cabecera)
+  const alerts = useTrainAlerts({ tripId: train.tripId, tipo: train.tipo, routeId: detail?.routeId });
+  const [alertsOpen, setAlertsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showItinerary, setShowItinerary] = useState(false);
@@ -89,9 +94,9 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ train, onClose }) => {
     >
       <div className={`
         mx-auto max-w-lg rounded-[26px] pointer-events-auto overflow-hidden
-        shadow-[0_-8px_48px_rgba(0,0,0,0.28)] backdrop-blur-2xl
-        bg-white/97 border border-accent-50
-        dark:bg-[#0d0d1f]/96 dark:border-accent-500/15
+        shadow-[0_-8px_48px_rgba(0,0,0,0.28)]
+        bg-white border border-accent-50
+        dark:bg-[#0d0d1f] dark:border-accent-500/15
       `}>
         <div className="h-[3px]" style={{ background: `linear-gradient(90deg, ${accent}, ${accent}88, transparent)` }} />
         
@@ -161,13 +166,19 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ train, onClose }) => {
                 {train.label}
               </h2>
             </div>
-            <button 
-              onClick={onClose} 
-              className="ml-3 p-2 rounded-full transition-all text-slate-400 hover:text-accent-900 hover:bg-accent-50 dark:text-slate-500 dark:hover:text-white dark:hover:bg-white/10"
-            >
-              <X size={16} />
-            </button>
+            <div className="ml-3 flex shrink-0 items-center gap-1.5">
+              <AlertsButton size="sm" count={alerts.length} open={alertsOpen} onToggle={() => setAlertsOpen((v) => !v)} />
+              <button
+                onClick={onClose} 
+                aria-label="Cerrar"
+                className="p-2 rounded-full transition text-slate-400 hover:text-accent-900 hover:bg-accent-50 dark:text-slate-500 dark:hover:text-white dark:hover:bg-white/10"
+              >
+                <X size={16} />
+              </button>
+            </div>
           </div>
+
+          {alerts.length > 0 && <AlertsList alerts={alerts} open={alertsOpen} />}
 
           <div className="flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl font-mono text-[12px] tracking-wider bg-accent-50 border border-accent-100 text-accent-400 dark:bg-accent-500/[0.07] dark:border-accent-500/[0.12] dark:text-accent-300">
             <Navigation2 size={12} style={{ color: accent }} className="shrink-0" />
@@ -180,19 +191,21 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ train, onClose }) => {
             </div>
           )}
 
-          <AnimatePresence initial={false}>
-            {showItinerary && detail && (
-              <motion.div 
-                initial={{ height: 0, opacity: 0 }} 
-                animate={{ height: 'auto', opacity: 1 }} 
-                exit={{ height: 0, opacity: 0 }} 
-                transition={{ type: 'spring', damping: 28, stiffness: 240 }}
-                className="space-y-2 flex flex-col overflow-hidden"
-              >
-                {/* 
-                  ALTO FIJO INMUTABLE (h-[230px]):
-                  El contenedor no cambia de tamaño nunca. Evitamos tirones y bailes de Layout.
-                */}
+          {/* Itinerario: apertura con grid-template-rows (CSS nativo) + fundido con transform */}
+          {detail && (
+            <div
+              className={`grid transition-[grid-template-rows] duration-[420ms] ease-[cubic-bezier(0.32,0.72,0,1)] motion-reduce:transition-none ${
+                showItinerary ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+              }`}
+              inert={!showItinerary}
+              aria-hidden={!showItinerary}
+            >
+              <div className="min-h-0 overflow-hidden">
+                <div
+                  className={`flex flex-col space-y-2 transition-[opacity,transform] duration-300 ease-out ${
+                    showItinerary ? 'translate-y-0 opacity-100 delay-75' : '-translate-y-1.5 opacity-0'
+                  }`}
+                >
                 <div 
                   ref={scrollContainerRef}
                   className="h-[230px] overflow-y-auto pr-2 scroll-smooth
@@ -218,9 +231,10 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ train, onClose }) => {
                   <Eye size={12} />
                   Ir al origen del trayecto
                 </button>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                </div>
+              </div>
+            </div>
+          )}
 
           <button
             onClick={handleItinerary}
@@ -231,7 +245,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ train, onClose }) => {
             } : undefined}
             className={`
               w-full py-3.5 rounded-[13px] font-bold text-[13px] tracking-wide 
-              flex items-center justify-center gap-2 transition-all duration-150 active:scale-[0.98] disabled:opacity-50
+              flex items-center justify-center gap-2 transition duration-150 active:scale-[0.98] disabled:opacity-50
               ${loading || showItinerary 
                 ? 'bg-accent-50 text-accent-400 border border-accent-100 dark:bg-accent-500/10 dark:text-accent-400 dark:border-accent-500/15' 
                 : 'text-white'

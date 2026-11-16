@@ -168,9 +168,8 @@ const LiveNetwork = () => {
                   {/* Barra proporcional */}
                   <div className="flex h-2.5 w-full gap-1">
                     {stats.categories.map((c) => (
-                      <motion.span
+                      <span
                         key={c.label}
-                        layout
                         className="h-full rounded-full"
                         style={{ width: `${(c.count / stats.total) * 100}%`, background: c.color }}
                       />
@@ -246,9 +245,9 @@ const LiveNetwork = () => {
                     </div>
                     <div className="h-1 overflow-hidden rounded-full bg-slate-100 dark:bg-white/[0.06]">
                       <motion.span
-                        className="block h-full rounded-full bg-gradient-to-r from-accent-500 to-accent-600"
-                        initial={{ width: 0 }}
-                        animate={{ width: `${(count / stats.cities[0][1]) * 100}%` }}
+                        className="block h-full w-full origin-left rounded-full bg-gradient-to-r from-accent-500 to-accent-600"
+                        initial={{ scaleX: 0 }}
+                        animate={{ scaleX: count / stats.cities[0][1] }}
                         transition={{ duration: 0.8, delay: i * 0.06, ease: [0.16, 1, 0.3, 1] }}
                       />
                     </div>

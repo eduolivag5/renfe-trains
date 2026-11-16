@@ -5,7 +5,7 @@ const TrainSkeleton = () => (
       <span className="h-6 w-28 animate-pulse rounded-full bg-slate-100 dark:bg-white/[0.06]" />
       <span className="h-6 w-20 animate-pulse rounded-full bg-slate-100 dark:bg-white/[0.06]" />
     </div>
-    <div className="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-3 md:grid-cols-[8.5rem_1fr_auto] md:gap-x-6">
+    <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-3 md:grid-cols-[8.5rem_minmax(0,1fr)_auto] md:gap-x-6">
       <div className="flex items-center gap-2.5 md:flex-col md:items-start md:gap-1.5">
         <span className="h-4 w-14 animate-pulse rounded-md bg-slate-200 dark:bg-white/10" />
         <span className="h-2.5 w-10 animate-pulse rounded-full bg-slate-100 dark:bg-white/[0.06]" />

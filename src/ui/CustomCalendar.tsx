@@ -73,7 +73,7 @@ const CustomCalendar = ({ selectedDate, onDateSelect, minDate = startOfToday() }
             aria-label="Mes anterior"
             disabled={!canGoBack}
             onClick={() => goTo(addMonths(month, -1))}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition-all hover:bg-slate-50 active:scale-95 disabled:pointer-events-none disabled:opacity-30 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition hover:bg-slate-50 active:scale-95 disabled:pointer-events-none disabled:opacity-30 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
           >
             <ChevronLeft size={16} strokeWidth={2.5} />
           </button>
@@ -81,7 +81,7 @@ const CustomCalendar = ({ selectedDate, onDateSelect, minDate = startOfToday() }
             type="button"
             aria-label="Mes siguiente"
             onClick={() => goTo(addMonths(month, 1))}
-            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition-all hover:bg-slate-50 active:scale-95 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
+            className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition hover:bg-slate-50 active:scale-95 dark:border-white/10 dark:text-slate-300 dark:hover:bg-white/5"
           >
             <ChevronRight size={16} strokeWidth={2.5} />
           </button>
@@ -131,7 +131,7 @@ const CustomCalendar = ({ selectedDate, onDateSelect, minDate = startOfToday() }
                   aria-pressed={selected}
                   aria-label={format(day, "EEEE d 'de' MMMM", { locale: es })}
                   className={[
-                    'relative mx-auto flex h-10 w-10 items-center justify-center rounded-xl text-[14px] font-semibold tabular-nums transition-all duration-150',
+                    'relative mx-auto flex h-10 w-10 items-center justify-center rounded-xl text-[14px] font-semibold tabular-nums transition duration-150',
                     disabled
                       ? 'cursor-default text-slate-300 dark:text-slate-700'
                       : selected

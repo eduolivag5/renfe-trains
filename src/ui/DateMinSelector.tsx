@@ -8,7 +8,7 @@ interface DateSelectorProps {
   onDateChange: (newDate: string) => void;
 }
 
-const VISIBLE = 7;
+const VISIBLE = 5;
 const CENTER = Math.floor(VISIBLE / 2);
 /** Misma curva y duración para la tira y el resaltado: se mueven a la vez */
 const MOTION = 'duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none';
@@ -41,7 +41,7 @@ export const DateMinSelector = ({ date, loading, onDateChange }: DateSelectorPro
         <ChevronLeft size={18} strokeWidth={2.5} />
       </button>
 
-      {/* Ventana de 7 días */}
+      {/* Ventana de 5 días */}
       <div className="relative min-w-0 flex-1 overflow-hidden">
         <div
           className={`relative flex transition-transform will-change-transform ${MOTION}`}

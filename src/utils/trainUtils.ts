@@ -114,3 +114,33 @@ export const formatDuration = (min: number) => {
   const m = min % 60;
   return h ? `${h} h${m ? ` ${m} min` : ''}` : `${m} min`;
 };
+
+/**
+ * Hora legible "HH:MM" a partir de cualquier formato que devuelva la API:
+ * "7:20", "7:20:00", "07:20:", "25:10:00" (GTFS, día siguiente → 01:10). Nunca termina en ":".
+ */
+export const formatClock = (t?: string | null) => {
+  const match = t?.match(/(\d{1,2}):(\d{1,2})/);
+  if (!match) return '--:--';
+  const h = Number(match[1]) % 24;
+  return `${String(h).padStart(2, '0')}:${match[2].padStart(2, '0')}`;
+};
+
+/**
+ * Paradas intermedias: no cuentan ni la estación de origen ni la de destino.
+ * Recibe el nº total de estaciones del recorrido.
+ */
+export const intermediateStops = (totalStations: number) => Math.max(0, totalStations - 2);
+
+/** "Sin paradas", "1 parada", "5 paradas" */
+export const stopsLabel = (n: number) => (n === 0 ? 'Sin paradas' : n === 1 ? '1 parada' : `${n} paradas`);
+
+/**
+ * Texto del tipo de tren solo cuando el logo no lo dice ya: Alvia (logo Intercity),
+ * MD (logo Regional), Avant Exprés, líneas de Cercanías (C4…). Para AVE, AVLO, Avant,
+ * Intercity o Regional devuelve null porque el logo basta.
+ */
+export const trainTypeHint = (trainType: string) => {
+  const key = trainType.trim().toUpperCase();
+  return getTrainIdentity(key).logo === key ? null : trainType.trim();
+};

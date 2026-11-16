@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { format } from 'date-fns';
 import {
@@ -14,6 +14,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { TrainCard, type ProcessedTrain, type TrainStatus } from './TrainCard';
+import TrainDetailSheet from './TrainDetailSheet';
 import {
   formatDuration,
   getMapTrainInfo,
@@ -96,6 +97,9 @@ interface TrainResultsProps {
 
 export const TrainResults = ({ trains, date, onNextDay }: TrainResultsProps) => {
   const [sort, setSort] = useState<Sort>('departure');
+  // Tren cuyo detalle está abierto en el panel (hoja inferior en móvil, lateral en escritorio)
+  const [selected, setSelected] = useState<ProcessedTrain | null>(null);
+  const closeDetail = useCallback(() => setSelected(null), []);
   const [types, setTypes] = useState<Set<string>>(new Set());
   const [periods, setPeriods] = useState<Set<string>>(new Set());
   const [families, setFamilies] = useState<Set<string>>(new Set());
@@ -250,7 +254,7 @@ export const TrainResults = ({ trains, date, onNextDay }: TrainResultsProps) => 
                 role="radio"
                 aria-checked={sort === value}
                 onClick={() => setSort(value)}
-                className={`flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[13px] font-bold transition-all ${
+                className={`flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3.5 py-1.5 text-[13px] font-bold transition ${
                   sort === value
                     ? 'bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-white'
                     : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'
@@ -273,7 +277,7 @@ export const TrainResults = ({ trains, date, onNextDay }: TrainResultsProps) => 
               transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
               className="overflow-hidden"
             >
-              <div className="grid gap-6 rounded-3xl border border-slate-200/80 bg-white p-5 md:grid-cols-2 dark:border-white/[0.07] dark:bg-slate-900/60">
+              <div className="grid gap-6 rounded-3xl border border-slate-200/80 bg-white p-5 md:grid-cols-2 xl:grid-cols-4 dark:border-white/[0.07] dark:bg-slate-900/60">
                 <FilterGroup title="Hora de salida">
                   {PERIODS.map((p) => (
                     <Chip
@@ -414,14 +418,23 @@ export const TrainResults = ({ trains, date, onNextDay }: TrainResultsProps) => 
                 <span className="ml-1 h-px flex-1 bg-slate-200 dark:bg-white/[0.08]" />
               </div>
             )}
-            <div className="space-y-2.5">
+            <div className="grid gap-2.5 2xl:grid-cols-2">
               {g.items.map((train) => (
-                <TrainCard key={train.tripId} train={train} index={index++} status={statusById.get(train.tripId) ?? null} />
+                <TrainCard
+                  key={train.tripId}
+                  train={train}
+                  index={index++}
+                  status={statusById.get(train.tripId) ?? null}
+                  onOpen={setSelected}
+                  active={selected?.tripId === train.tripId}
+                />
               ))}
             </div>
           </section>
         ))
       )}
+
+      <TrainDetailSheet train={selected} onClose={closeDetail} />
     </div>
   );
 };

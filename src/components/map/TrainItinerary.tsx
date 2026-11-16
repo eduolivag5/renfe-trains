@@ -1,6 +1,7 @@
 import React from 'react';
 import { Check } from 'lucide-react';
 import { type TrainDetail } from '../../api/trainsService';
+import { formatClock } from '../../utils/trainUtils';
 
 interface TrainItineraryProps {
   itinerary: TrainDetail['itinerary'];
@@ -51,7 +52,7 @@ const TrainItinerary: React.FC<TrainItineraryProps> = ({ itinerary, accent }) =>
           
           {/* Horario */}
           <span className="font-mono tabular-nums shrink-0 text-[11px] text-accent-300 dark:text-accent-400">
-            {stop.actualArrival || stop.scheduledArrival}
+            {formatClock(stop.actualArrival || stop.scheduledArrival)}
           </span>
         </div>
       ))}

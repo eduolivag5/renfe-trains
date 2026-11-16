@@ -30,7 +30,7 @@ const SearchPreview = () => (
 
 /** Grupos de trenes sobre un mapa */
 const MapPreview = () => (
-  <svg aria-hidden viewBox="0 0 200 110" className="h-full w-full drop-shadow-[0_8px_16px_rgba(2,33,71,0.18)]">
+  <svg aria-hidden viewBox="0 0 200 110" className="h-full w-full">
     <path
       d="M40 22 L95 14 L150 20 L172 40 L160 62 L150 88 L110 98 L70 94 L48 80 L36 58 L28 40 Z"
       className="fill-white stroke-slate-200 dark:fill-slate-800 dark:stroke-white/10"
@@ -131,7 +131,7 @@ const AppFeatures = () => {
               {/* Línea superior que se rellena al pasar el ratón */}
               <span
                 aria-hidden
-                className="absolute -top-px left-0 h-0.5 w-0 bg-accent-600 transition-all duration-700 ease-out group-hover:w-full dark:bg-accent-400"
+                className="absolute -top-px left-0 h-0.5 w-full origin-left scale-x-0 bg-accent-600 transition-transform duration-700 ease-out group-hover:scale-x-100 dark:bg-accent-400"
               />
 
               <span className="self-start pt-1.5 font-mono text-sm font-bold text-slate-300 transition-colors group-hover:text-accent-600 md:text-base dark:text-slate-600 dark:group-hover:text-accent-400">
@@ -152,7 +152,7 @@ const AppFeatures = () => {
                 </div>
               </div>
 
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-400 transition-all duration-300 group-hover:rotate-45 group-hover:border-accent-600 group-hover:bg-accent-600 group-hover:text-white dark:border-white/10 dark:text-slate-500 dark:group-hover:border-accent-500 dark:group-hover:bg-accent-500">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-400 transition duration-300 group-hover:rotate-45 group-hover:border-accent-600 group-hover:bg-accent-600 group-hover:text-white dark:border-white/10 dark:text-slate-500 dark:group-hover:border-accent-500 dark:group-hover:bg-accent-500">
                 <ArrowUpRight size={20} strokeWidth={2.5} />
               </span>
             </button>

@@ -3,6 +3,7 @@ import StationSearch from '../components/station-search/StationSearch';
 import HeroSection from '../components/home/HeroSection';
 import TrainFamilies from '../components/home/TrainFamilies';
 import LiveNetwork from '../components/home/LiveNetwork';
+import HomeAlerts from '../components/home/HomeAlerts';
 import AppFeatures from '../components/home/AppFeatures';
 import PopularRoutes from '../components/search-results/PopularRoutes';
 
@@ -12,7 +13,7 @@ const HomePage = () => {
       
       <HeroSection />
 
-      <div id="search-section" className="relative z-30 w-full max-w-7xl mx-auto py-12 px-6 space-y-40 [content-visibility:auto] [contain-intrinsic-size:1000px]">
+      <div id="search-section" className="relative z-30 w-full max-w-page mx-auto py-12 px-page space-y-40 [content-visibility:auto] [contain-intrinsic-size:1000px]">
         
         {/* SECCIÓN DE BÚSQUEDA REFORZADA */}
         <section className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-20 items-center">
@@ -46,7 +47,7 @@ const HomePage = () => {
           </div>
           
           {/* BUSCADOR: Primero en móvil (order-1), segundo en PC (lg:order-2) */}
-          <div className="order-2 lg:order-2 will-change-transform">
+          <div className="order-2 lg:order-2">
             <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] md:rounded-[3rem] shadow-2xl border border-slate-100 dark:border-white/5 p-1.5 ring-1 ring-slate-200/50 dark:ring-white/5">
               <StationSearch />
             </div>
@@ -67,6 +68,9 @@ const HomePage = () => {
 
         {/* LA RED EN DIRECTO */}
         <LiveNetwork />
+
+        {/* AVISOS DEL SERVICIO */}
+        <HomeAlerts />
 
         {/* QUÉ SE PUEDE HACER EN LA WEB */}
         <AppFeatures />
