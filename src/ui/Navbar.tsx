@@ -21,7 +21,7 @@ const NAV_LINKS: NavLink[] = [
   { name: 'Trenes', Icon: TrainFront, href: '/trenes' },
   { name: 'Mapa', Icon: Map, href: '/mapa' },
   { name: 'Buscar', Icon: Search, href: '/buscar' },
-  { name: 'Alertas', Icon: TriangleAlert, href: '/alertas', desktopOnly: true },
+  { name: 'Avisos', Icon: TriangleAlert, href: '/avisos', desktopOnly: true },
   { name: 'Ajustes', Icon: Settings, href: '/ajustes' },
 ];
 
@@ -49,7 +49,7 @@ const ThemeIcon: React.FC<{ isDarkMode: boolean; size: number }> = ({ isDarkMode
 const Navbar: React.FC<NavbarProps> = ({ isDarkMode, toggleTheme }) => {
   const { pathname } = useLocation();
   const activeHref = NAV_LINKS.find((l) => l.href === pathname)?.href ?? null;
-  // En la barra móvil: -1 si la página actual no tiene pestaña (p. ej. /alertas)
+  // En la barra móvil: -1 si la página actual no tiene pestaña (p. ej. /avisos)
   const activeIndex = MOBILE_LINKS.findIndex((l) => l.href === pathname);
 
   /** Pulsar la pestaña de la página actual vuelve suavemente arriba */

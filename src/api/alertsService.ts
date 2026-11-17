@@ -1,6 +1,6 @@
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 
-/** Alerta de servicio tal como la devuelve la API (/alertas y /alertas/linea/{route_id}) */
+/** Aviso de servicio tal como lo devuelve la API (endpoints del backend /alertas y /alertas/linea/{route_id}) */
 export interface ServiceAlert {
   id: number;
   alertId: string; // "INFO_526465", "AVISO_526197"…
@@ -11,7 +11,7 @@ export interface ServiceAlert {
   routeIds: string[];
 }
 
-/** Lo mínimo que necesitamos del tren para encontrar sus alertas */
+/** Lo mínimo que necesitamos del tren para encontrar sus avisos */
 export interface AlertLookup {
   tripId: string;
   /** Tipo / línea: "C5", "R4", "AVE"… */
@@ -23,12 +23,15 @@ export interface AlertLookup {
 const CACHE_MS = 2 * 60_000;
 let allCache: { at: number; promise: Promise<ServiceAlert[]> } | null = null;
 
-/** Todas las alertas actuales (una sola petición compartida y cacheada 2 min) */
-export function getAllAlerts(): Promise<ServiceAlert[]> {
-  if (allCache && Date.now() - allCache.at < CACHE_MS) return allCache.promise;
+/**
+ * Todos los avisos actuales (una sola petición compartida y cacheada 2 min).
+ * `force` ignora la caché (botón "Actualizar") y la renueva para el resto de componentes.
+ */
+export function getAllAlerts(force = false): Promise<ServiceAlert[]> {
+  if (!force && allCache && Date.now() - allCache.at < CACHE_MS) return allCache.promise;
   const promise = fetch(`${API_BASE_URL}/alertas`)
     .then((r) => {
-      if (!r.ok) throw new Error('Error al obtener las alertas');
+      if (!r.ok) throw new Error('Error al obtener los avisos');
       return r.json() as Promise<ServiceAlert[]>;
     })
     .catch((e) => {
@@ -39,10 +42,10 @@ export function getAllAlerts(): Promise<ServiceAlert[]> {
   return promise;
 }
 
-/** Alertas de una línea concreta por su route_id GTFS */
+/** Avisos de una línea concreta por su route_id GTFS */
 export async function getAlertsByLine(routeId: string): Promise<ServiceAlert[]> {
   const r = await fetch(`${API_BASE_URL}/alertas/linea/${encodeURIComponent(routeId)}`);
-  if (!r.ok) throw new Error('Error al obtener las alertas de la línea');
+  if (!r.ok) throw new Error('Error al obtener los avisos de la línea');
   return r.json();
 }
 
@@ -52,11 +55,11 @@ const GTFS_ROUTE = /^(\d{2})T\d{4}(.+)$/i;
 const LOCAL_LINE = /^(C|R|T)[A-Z]*\d/i;
 
 /**
- * Alertas que afectan al tren.
+ * Avisos que afectan al tren.
  * - Si su routeId ya viene en formato GTFS, se consulta /alertas/linea/{routeId}.
  * - Si no (hoy el detalle devuelve el nº de tren o null), se cruza núcleo + línea con /alertas:
  *   el tripId de Cercanías/Rodalies empieza por el código de núcleo ("1019L20869C5" → 10)
- *   y el tipo es la línea ("C5"), igual que en el route_id de la alerta ("10T0110C5").
+ *   y el tipo es la línea ("C5"), igual que en el route_id del aviso ("10T0110C5").
  */
 export async function getAlertsForTrain({ tripId, tipo, routeId }: AlertLookup): Promise<ServiceAlert[]> {
   if (routeId && GTFS_ROUTE.test(routeId)) return getAlertsByLine(routeId);

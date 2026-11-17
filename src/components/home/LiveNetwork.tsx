@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { ArrowUpRight, MapPin, Radio, RefreshCw } from 'lucide-react';
 import { trainsService, type TrainMap } from '../../api/trainsService';
 import { CITIES, COLORS, getTrainColor } from '../map/MapConstants';
@@ -11,7 +10,7 @@ const CITY_RADIUS_KM = 30;
 
 const CATEGORIES = [
   { label: 'Alta velocidad', color: COLORS.altaVelocidad },
-  { label: 'Media distancia', color: COLORS.mediaDistancia },
+  { label: 'Larga y media distancia', color: COLORS.mediaDistancia },
   { label: 'Cercanías', color: COLORS.cercanias },
   { label: 'Rodalies', color: COLORS.rodalies },
   { label: 'Otros', color: COLORS.otros },
@@ -97,21 +96,23 @@ const LiveNetwork = () => {
   const loading = !stats && !error;
 
   return (
-    <section ref={sectionRef} className="relative space-y-12">
-      {/* Cabecera */}
-      <div className="max-w-2xl space-y-4">
-        <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-400">
-          <Radio size={14} /> En directo
+    // En escritorio la cabecera va en la columna izquierda, junto al total: la sección ocupa
+    // a lo ancho en lugar de apilarse y cabe en la pantalla de un portátil
+    <section ref={sectionRef} className="relative grid gap-12 lg:grid-cols-[1.15fr_1fr] lg:gap-16">
+      <div className="min-w-0 space-y-8 compact:space-y-6">
+        {/* Cabecera */}
+        <div className="max-w-2xl space-y-3">
+          <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-400">
+            <Radio size={14} /> En directo
+          </div>
+          <h2 className="text-3xl font-black leading-none tracking-tighter text-slate-900 md:text-4xl lg:leading-[1.1] dark:text-white">
+            La red, ahora mismo
+          </h2>
+          <p className="text-base leading-relaxed text-slate-500 md:text-lg dark:text-slate-400">
+            Trenes circulando en este momento según su posición en tiempo real.
+          </p>
         </div>
-        <h2 className="text-3xl font-black leading-none tracking-tighter text-slate-900 md:text-5xl lg:leading-[1.1] dark:text-white">
-          La red, ahora mismo
-        </h2>
-        <p className="text-base leading-relaxed text-slate-500 md:text-xl dark:text-slate-400">
-          Trenes circulando en este momento según su posición en tiempo real.
-        </p>
-      </div>
 
-      <div className="grid gap-14 lg:grid-cols-[1.15fr_1fr] lg:gap-20">
         {/* ---------- Total y reparto (sin tarjeta, tipografía grande) ---------- */}
         <div className="relative">
           {/* Trazado de vías decorativo detrás del número */}
@@ -119,7 +120,7 @@ const LiveNetwork = () => {
             aria-hidden
             viewBox="0 0 600 300"
             preserveAspectRatio="xMidYMid slice"
-            className="pointer-events-none absolute -inset-x-6 -top-10 h-72 w-[calc(100%+3rem)] text-slate-200 dark:text-white/[0.06]"
+            className="pointer-events-none absolute -inset-x-6 -top-10 h-60 w-[calc(100%+3rem)] text-slate-200 dark:text-white/[0.06]"
           >
             <g fill="none" stroke="currentColor" strokeWidth={1.5}>
               <path d="M -10 230 L 260 230 L 340 150 L 610 150" />
@@ -129,7 +130,7 @@ const LiveNetwork = () => {
             <circle cx={340} cy={150} r={5} className="fill-white dark:fill-[#020617]" stroke="currentColor" strokeWidth={1.5} />
           </svg>
 
-          <div className="relative space-y-8">
+          <div className="relative space-y-6 compact:space-y-5">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] font-semibold text-slate-500 dark:text-slate-400">
               <span className="flex items-center gap-2">
                 <span className="relative flex h-2 w-2">
@@ -156,14 +157,12 @@ const LiveNetwork = () => {
             ) : (
               stats && (
                 <>
-                  <motion.p
+                  <p
                     key={stats.total}
-                    initial={{ opacity: 0.4 }}
-                    animate={{ opacity: 1 }}
-                    className="bg-gradient-to-br from-[#002147] via-[#0b3a6e] to-accent-600 bg-clip-text pb-2 text-[clamp(3.5rem,8vw,6rem)] font-black leading-[0.9] tracking-tighter text-transparent tabular-nums dark:from-white dark:via-accent-100 dark:to-accent-400"
+                    className="soft-fade bg-gradient-to-br from-[#002147] via-[#0b3a6e] to-accent-600 bg-clip-text pb-2 text-[clamp(3rem,6vw,4.75rem)] font-black leading-[0.9] tracking-tighter text-transparent tabular-nums dark:from-white dark:via-accent-100 dark:to-accent-400"
                   >
                     {stats.total.toLocaleString('es-ES')}
-                  </motion.p>
+                  </p>
 
                   {/* Barra proporcional */}
                   <div className="flex h-2.5 w-full gap-1">
@@ -177,17 +176,17 @@ const LiveNetwork = () => {
                   </div>
 
                   {/* Tipos en columnas separadas por líneas */}
-                  <ul className="grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-5">
+                  <ul className="grid grid-cols-2 gap-x-5 gap-y-4 sm:grid-cols-5">
                     {stats.categories.map((c) => (
                       <li
                         key={c.label}
                         className="border-t border-slate-200 pt-3 dark:border-white/10"
                       >
-                        <span className="flex items-center gap-2 whitespace-nowrap text-[12px] font-semibold text-slate-500 dark:text-slate-400">
-                          <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: c.color }} />
+                        <span className="flex items-start gap-2 text-[12px] sm:min-h-[2lh] font-semibold leading-tight text-slate-500 dark:text-slate-400">
+                          <span className="mt-[3px] h-2 w-2 shrink-0 rounded-full" style={{ background: c.color }} />
                           {c.label}
                         </span>
-                        <span className="mt-1 block text-3xl font-black tabular-nums text-slate-900 dark:text-white">{c.count}</span>
+                        <span className="mt-1 block text-2xl font-black tabular-nums text-slate-900 dark:text-white">{c.count}</span>
                       </li>
                     ))}
                   </ul>
@@ -198,7 +197,7 @@ const LiveNetwork = () => {
             <button
               type="button"
               onClick={() => navigate('/mapa')}
-              className="group flex items-center gap-2.5 rounded-full bg-slate-900 py-3 pl-6 pr-3 text-sm font-bold text-white transition-transform active:scale-95 dark:bg-white dark:text-slate-900"
+              className="group flex items-center gap-2.5 rounded-full bg-slate-900 py-2.5 pl-5 pr-2.5 text-sm font-bold text-white transition-transform active:scale-95 dark:bg-white dark:text-slate-900"
             >
               Abrir mapa en vivo
               <span className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 transition-transform group-hover:rotate-45 dark:bg-slate-900/10">
@@ -207,60 +206,59 @@ const LiveNetwork = () => {
             </button>
           </div>
         </div>
+      </div>
 
-        {/* ---------- Ranking de ciudades (tablero, sin tarjeta) ---------- */}
-        <div>
-          <div className="flex items-baseline justify-between gap-4 pb-4">
-            <h3 className="flex items-center gap-2 text-lg font-black tracking-tight text-slate-900 dark:text-white">
-              <MapPin size={18} strokeWidth={2.5} className="text-accent-600 dark:text-accent-400" />
-              Dónde hay más trenes
-            </h3>
-            <span className="whitespace-nowrap text-[12px] font-semibold text-slate-400 dark:text-slate-500">radio de {CITY_RADIUS_KM} km</span>
-          </div>
-
-          {loading ? (
-            <div>
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-5 border-t border-slate-200 py-4 dark:border-white/10">
-                  <span className="h-8 w-8 animate-pulse rounded-lg bg-slate-100 dark:bg-white/[0.06]" />
-                  <span className="h-4 flex-1 animate-pulse rounded-full bg-slate-100 dark:bg-white/[0.06]" />
-                </div>
-              ))}
-            </div>
-          ) : stats && stats.cities.length > 0 ? (
-            <ol className="border-b border-slate-200 dark:border-white/10">
-              {stats.cities.map(([name, count], i) => (
-                <li key={name} className="flex items-center gap-5 border-t border-slate-200 py-4 dark:border-white/10">
-                  <span
-                    className={`w-9 shrink-0 text-3xl font-black leading-none tabular-nums ${
-                      i === 0 ? 'text-accent-600 dark:text-accent-400' : 'text-slate-200 dark:text-white/10'
-                    }`}
-                  >
-                    {i + 1}
-                  </span>
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <div className="flex items-baseline justify-between gap-3">
-                      <span className="truncate text-[17px] font-bold text-slate-900 dark:text-white">{name}</span>
-                      <span className="text-lg font-black tabular-nums text-slate-900 dark:text-white">{count}</span>
-                    </div>
-                    <div className="h-1 overflow-hidden rounded-full bg-slate-100 dark:bg-white/[0.06]">
-                      <motion.span
-                        className="block h-full w-full origin-left rounded-full bg-gradient-to-r from-accent-500 to-accent-600"
-                        initial={{ scaleX: 0 }}
-                        animate={{ scaleX: count / stats.cities[0][1] }}
-                        transition={{ duration: 0.8, delay: i * 0.06, ease: [0.16, 1, 0.3, 1] }}
-                      />
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ol>
-          ) : (
-            <p className="border-t border-slate-200 pt-4 text-sm text-slate-500 dark:border-white/10 dark:text-slate-400">
-              Sin datos en este momento.
-            </p>
-          )}
+      {/* ---------- Ranking de ciudades (tablero, sin tarjeta) ---------- */}
+      <div className="min-w-0 lg:pt-2">
+        <div className="flex items-baseline justify-between gap-4 pb-4">
+          <h3 className="flex items-center gap-2 text-lg font-black tracking-tight text-slate-900 dark:text-white">
+            <MapPin size={18} strokeWidth={2.5} className="text-accent-600 dark:text-accent-400" />
+            Dónde hay más trenes
+          </h3>
+          <span className="whitespace-nowrap text-[12px] font-semibold text-slate-400 dark:text-slate-500">radio de {CITY_RADIUS_KM} km</span>
         </div>
+
+        {loading ? (
+          <div>
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-5 border-t border-slate-200 py-3 dark:border-white/10">
+                <span className="h-8 w-8 animate-pulse rounded-lg bg-slate-100 dark:bg-white/[0.06]" />
+                <span className="h-4 flex-1 animate-pulse rounded-full bg-slate-100 dark:bg-white/[0.06]" />
+              </div>
+            ))}
+          </div>
+        ) : stats && stats.cities.length > 0 ? (
+          <ol className="border-b border-slate-200 dark:border-white/10">
+            {stats.cities.map(([name, count], i) => (
+              <li key={name} className="flex items-center gap-5 border-t border-slate-200 py-3 dark:border-white/10">
+                <span
+                  className={`w-8 shrink-0 text-2xl font-black leading-none tabular-nums ${
+                    i === 0 ? 'text-accent-600 dark:text-accent-400' : 'text-slate-200 dark:text-white/10'
+                  }`}
+                >
+                  {i + 1}
+                </span>
+                <div className="min-w-0 flex-1 space-y-2">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="truncate text-base font-bold text-slate-900 dark:text-white">{name}</span>
+                    <span className="text-lg font-black tabular-nums text-slate-900 dark:text-white">{count}</span>
+                  </div>
+                  <div className="h-1 overflow-hidden rounded-full bg-slate-100 dark:bg-white/[0.06]">
+                    {/* Crece al aparecer y se ajusta con transición al llegar datos (CSS, GPU) */}
+                    <span
+                      className="grow-x block h-full w-full rounded-full bg-gradient-to-r from-accent-500 to-accent-600"
+                      style={{ transform: `scaleX(${count / stats.cities[0][1]})`, '--delay': `${i * 60}ms` } as CSSProperties}
+                    />
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="border-t border-slate-200 pt-4 text-sm text-slate-500 dark:border-white/10 dark:text-slate-400">
+            Sin datos en este momento.
+          </p>
+        )}
       </div>
     </section>
   );

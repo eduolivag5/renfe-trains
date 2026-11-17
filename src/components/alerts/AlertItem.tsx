@@ -1,21 +1,28 @@
-import { useState } from 'react';
-import { CalendarClock } from 'lucide-react';
+import { memo, useState, type CSSProperties } from 'react';
+import { CalendarClock, Info, TriangleAlert } from 'lucide-react';
 import { cleanAlertText } from '../../api/alertsService';
 import { networkName, relativeTime, type AlertView } from './alertFormat';
 
 const LONG_TEXT = 240;
 
-/** Tipo de alerta: punto ámbar para avisos, lila para información */
-export const AlertKind = ({ warning }: { warning: boolean }) => (
-  <span
-    className={`flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.14em] ${
-      warning ? 'text-amber-600 dark:text-amber-400' : 'text-accent-600 dark:text-accent-400'
-    }`}
-  >
-    <span className={`h-1.5 w-1.5 rounded-full ${warning ? 'bg-amber-500' : 'bg-accent-500'}`} />
-    {warning ? 'Aviso' : 'Info'}
+/** Aviso programado (empieza más adelante) */
+export const ScheduledBadge = () => (
+  <span className="flex items-center gap-1 rounded-full border border-slate-300 px-2 py-0.5 text-[11px] font-bold text-slate-600 dark:border-white/15 dark:text-slate-300">
+    <CalendarClock size={12} strokeWidth={2.5} /> Programado
   </span>
 );
+
+/** Insignia más marcada para la página de avisos: aviso sólido en ámbar, información sutil en azul */
+export const KindBadge =({ warning }: { warning: boolean }) =>
+  warning ? (
+    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500 px-2 py-0.5 text-[11px] font-black uppercase tracking-[0.1em] text-white dark:bg-amber-400 dark:text-amber-950">
+      <TriangleAlert size={12} strokeWidth={2.75} /> Aviso
+    </span>
+  ) : (
+    <span className="inline-flex items-center gap-1 rounded-full bg-sky-500/10 px-2 py-0.5 text-[11px] font-bold uppercase tracking-[0.1em] text-sky-700 dark:bg-sky-400/10 dark:text-sky-300">
+      <Info size={12} strokeWidth={2.5} /> Información
+    </span>
+  );
 
 export const LineChips = ({ lines, max = 8 }: { lines: string[]; max?: number }) => {
   if (!lines.length) return null;
@@ -39,15 +46,36 @@ export const LineChips = ({ lines, max = 8 }: { lines: string[]; max?: number })
   );
 };
 
-/** Fila editorial de una alerta (sin tarjeta): fecha a la izquierda, contenido a la derecha */
-export const AlertItem = ({ view, now }: { view: AlertView; now: number }) => {
+/** Solo las primeras filas (las que se ven al cargar) tienen animación de entrada escalonada */
+const ANIMATED_ROWS = 10;
+
+/**
+ * Fila editorial de un aviso (sin tarjeta): fecha a la izquierda, contenido a la derecha.
+ * Los avisos llevan filete ámbar a la izquierda, fondo tintado y texto más contrastado; la
+ * información queda en segundo plano.
+ *
+ * Rendimiento:
+ * - `memo`: solo se re-renderiza si cambia su aviso, su posición o la hora de referencia.
+ * - Entrada con animación CSS (opacity + transform, `.alert-enter` en index.css): la compone la
+ *   GPU en su propio hilo, sin JavaScript por frame ni lecturas de layout.
+ * - `.alert-row` usa `content-visibility: auto`: las filas fuera de pantalla no se maquetan ni pintan.
+ */
+export const AlertItem = memo(function AlertItem({ view, now, index }: { view: AlertView; now: number; index: number }) {
   const [expanded, setExpanded] = useState(false);
   const text = cleanAlertText(view.alert.descripcion);
   const long = text.length > LONG_TEXT;
-  const { start } = view;
+  const { start, isWarning } = view;
+  const animated = index < ANIMATED_ROWS;
 
   return (
-    <li className="grid min-w-0 gap-x-8 gap-y-2 border-t border-slate-200/80 py-6 md:grid-cols-[8rem_minmax(0,1fr)] dark:border-white/[0.07]">
+    <li
+      style={animated ? ({ '--i': index } as CSSProperties) : undefined}
+      className={`alert-row relative grid min-w-0 gap-x-8 gap-y-2 border-t border-slate-200/80 py-6 pl-4 pr-2 md:grid-cols-[8rem_minmax(0,1fr)] md:pl-5 dark:border-white/[0.07] ${
+        isWarning ? 'bg-amber-50/70 dark:bg-amber-400/[0.035]' : ''
+      } ${animated ? 'alert-enter' : ''}`}
+    >
+      {isWarning && <span aria-hidden className="absolute inset-y-0 left-0 w-[3px] bg-amber-500 dark:bg-amber-400" />}
+
       {/* Fecha */}
       <div className="flex items-baseline gap-2 md:flex-col md:gap-1">
         {start ? (
@@ -68,21 +96,17 @@ export const AlertItem = ({ view, now }: { view: AlertView; now: number }) => {
       {/* Contenido */}
       <div className="min-w-0 space-y-2.5">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-          <AlertKind warning={view.isWarning} />
+          <KindBadge warning={isWarning} />
           <span className="text-[13px] font-bold text-slate-700 dark:text-slate-200">
             {view.networks.map(networkName).join(' · ')}
           </span>
           <LineChips lines={view.lines} />
-          {view.upcoming && (
-            <span className="flex items-center gap-1 rounded-full bg-sky-500/10 px-2 py-0.5 text-[11px] font-bold text-sky-700 dark:text-sky-400">
-              <CalendarClock size={12} strokeWidth={2.5} /> Programado
-            </span>
-          )}
+          {view.upcoming && <ScheduledBadge />}
         </div>
         <p
-          className={`max-w-3xl text-[14px] leading-relaxed text-slate-600 [overflow-wrap:anywhere] dark:text-slate-300 ${
-            long && !expanded ? 'line-clamp-3' : ''
-          }`}
+          className={`max-w-3xl text-[14px] leading-relaxed [overflow-wrap:anywhere] ${
+            isWarning ? 'font-medium text-slate-800 dark:text-slate-100' : 'text-slate-500 dark:text-slate-400'
+          } ${long && !expanded ? 'line-clamp-3' : ''}`}
         >
           {text}
         </p>
@@ -99,10 +123,10 @@ export const AlertItem = ({ view, now }: { view: AlertView; now: number }) => {
       </div>
     </li>
   );
-};
+});
 
 export const AlertItemSkeleton = () => (
-  <li className="grid gap-x-8 gap-y-3 border-t border-slate-200/80 py-6 md:grid-cols-[8rem_minmax(0,1fr)] dark:border-white/[0.07]">
+  <li className="grid gap-x-8 gap-y-3 border-t border-slate-200/80 py-6 pl-4 pr-2 md:grid-cols-[8rem_minmax(0,1fr)] md:pl-5 dark:border-white/[0.07]">
     <span className="h-4 w-20 animate-pulse rounded bg-slate-200/70 dark:bg-white/[0.06]" />
     <div className="space-y-2.5">
       <span className="block h-3 w-40 animate-pulse rounded bg-slate-200/70 dark:bg-white/[0.06]" />

@@ -1,7 +1,8 @@
+import type { CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { ArrowUpRight, Layers } from 'lucide-react';
 import { getTrainLogo } from '../../utils/trainUtils';
+import { useReveal } from '../../hooks/useReveal';
 
 /* ------------------------------------------------------------------ */
 /* Mini vistas previas (decorativas, sin datos)                        */
@@ -55,7 +56,7 @@ const MapPreview = () => (
       [116, 82],
       [124, 30],
     ].map(([x, y]) => (
-      <circle key={`${x}-${y}`} cx={x} cy={y} r={4.5} fill="#851765" stroke="white" strokeWidth={1.5} />
+      <circle key={`${x}-${y}`} cx={x} cy={y} r={4.5} fill="#0b3a6e" stroke="white" strokeWidth={1.5} />
     ))}
   </svg>
 );
@@ -67,6 +68,37 @@ const FamiliesPreview = () => (
       <span key={k} className="flex h-11 items-center justify-center rounded-xl bg-white px-2 shadow-[0_8px_20px_-12px_rgba(2,33,71,0.3)]">
         <img src={getTrainLogo(k).src} alt="" className="max-h-4 w-auto max-w-full object-contain" />
       </span>
+    ))}
+  </div>
+);
+
+/** Dos avisos de ejemplo: uno destacado en ámbar y otro informativo */
+const AlertsPreview = () => (
+  <div aria-hidden className="space-y-2">
+    {[
+      { warning: true, lines: ['C3', 'C4'] },
+      { warning: false, lines: ['R2'] },
+    ].map(({ warning, lines }, i) => (
+      <div
+        key={i}
+        className={`relative space-y-1.5 overflow-hidden rounded-2xl bg-white p-3 pl-4 shadow-[0_8px_24px_-12px_rgba(2,33,71,0.25)] dark:bg-slate-800 ${
+          warning ? '' : 'opacity-80'
+        }`}
+      >
+        {warning && <span className="absolute inset-y-0 left-0 w-[3px] bg-amber-500" />}
+        <div className="flex items-center gap-1.5">
+          <span
+            className={`h-3 w-10 rounded-full ${warning ? 'bg-amber-500' : 'bg-sky-500/20'}`}
+          />
+          {lines.map((l) => (
+            <span key={l} className="rounded bg-slate-900 px-1 text-[8px] font-black leading-3 text-white dark:bg-white dark:text-slate-900">
+              {l}
+            </span>
+          ))}
+        </div>
+        <span className="block h-1.5 w-full rounded-full bg-slate-200 dark:bg-white/15" />
+        <span className="block h-1.5 w-2/3 rounded-full bg-slate-200 dark:bg-white/15" />
+      </div>
     ))}
   </div>
 );
@@ -91,6 +123,13 @@ const FEATURES: { title: string; text: string; cta: string; href: string; Previe
     Preview: MapPreview,
   },
   {
+    title: 'Revisa los avisos',
+    text: 'Incidencias, obras y cambios de servicio en Cercanías y Rodalies, por núcleo y línea.',
+    cta: 'Ver avisos',
+    href: '/avisos',
+    Preview: AlertsPreview,
+  },
+  {
     title: 'Conoce los trenes',
     text: 'Alta velocidad, media y larga distancia y Cercanías: qué ofrece cada servicio.',
     cta: 'Ver familias',
@@ -101,32 +140,33 @@ const FEATURES: { title: string; text: string; cta: string; href: string; Previe
 
 const AppFeatures = () => {
   const navigate = useNavigate();
+  // Un solo observador para toda la lista; cada fila entra escalonada con CSS (.reveal)
+  const [listRef, visible] = useReveal<HTMLOListElement>();
 
   return (
-    <section className="space-y-10">
-      <div className="max-w-2xl space-y-4">
+    <section className="space-y-8 compact:space-y-6">
+      <div className="max-w-2xl space-y-3">
         <div className="inline-flex items-center gap-2 rounded-full bg-accent-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-accent-600 dark:text-accent-400">
           <Layers size={14} /> Todo en un sitio
         </div>
-        <h2 className="text-3xl font-black leading-none tracking-tighter text-slate-900 md:text-5xl lg:leading-[1.1] dark:text-white">
+        <h2 className="text-3xl font-black leading-none tracking-tighter text-slate-900 md:text-4xl lg:leading-[1.1] dark:text-white">
           Qué puedes hacer aquí
         </h2>
       </div>
 
-      <ol className="border-b border-slate-200 dark:border-white/10">
+      {/* Cuadrícula 2×2 en escritorio: tamaños holgados sin que la sección crezca en alto */}
+      <ol ref={listRef} className="grid border-b border-slate-200 lg:grid-cols-2 lg:gap-x-12 dark:border-white/10">
         {FEATURES.map(({ title, text, cta, href, Preview }, i) => (
-          <motion.li
+          <li
             key={href}
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-60px' }}
-            transition={{ duration: 0.5, delay: i * 0.08, ease: [0.16, 1, 0.3, 1] }}
+            className={`reveal min-w-0 ${visible ? 'is-visible' : ''}`}
+            style={{ '--delay': `${i * 80}ms` } as CSSProperties}
           >
             <button
               type="button"
               onClick={() => navigate(href)}
               aria-label={`${title}: ${cta}`}
-              className="group relative grid w-full grid-cols-[auto_1fr_auto] items-center gap-x-5 gap-y-4 border-t border-slate-200 py-8 text-left md:grid-cols-[5rem_1fr_15rem_auto] md:gap-x-10 md:py-10 dark:border-white/10"
+              className="group relative grid h-full w-full grid-cols-[1fr_auto] items-center gap-x-6 border-t border-slate-200 py-7 text-left md:grid-cols-[1fr_10rem_auto] compact:py-6 dark:border-white/10"
             >
               {/* Línea superior que se rellena al pasar el ratón */}
               <span
@@ -134,29 +174,28 @@ const AppFeatures = () => {
                 className="absolute -top-px left-0 h-0.5 w-full origin-left scale-x-0 bg-accent-600 transition-transform duration-700 ease-out group-hover:scale-x-100 dark:bg-accent-400"
               />
 
-              <span className="self-start pt-1.5 font-mono text-sm font-bold text-slate-300 transition-colors group-hover:text-accent-600 md:text-base dark:text-slate-600 dark:group-hover:text-accent-400">
-                0{i + 1}
-              </span>
-
               <div className="min-w-0">
-                <h3 className="text-2xl font-black tracking-tight text-slate-900 transition-colors group-hover:text-accent-600 md:text-4xl dark:text-white dark:group-hover:text-accent-400">
+                <span className="font-mono text-sm font-bold text-slate-300 transition-colors group-hover:text-accent-600 dark:text-slate-600 dark:group-hover:text-accent-400">
+                  0{i + 1}
+                </span>
+                <h3 className="mt-1.5 text-2xl font-black tracking-tight text-slate-900 transition-colors group-hover:text-accent-600 md:text-[1.75rem] md:leading-tight dark:text-white dark:group-hover:text-accent-400">
                   {title}
                 </h3>
-                <p className="mt-2 max-w-md text-[15px] leading-relaxed text-slate-500 md:text-base dark:text-slate-400">{text}</p>
+                <p className="mt-2 max-w-md text-[15px] leading-relaxed text-slate-500 dark:text-slate-400">{text}</p>
               </div>
 
               {/* Vista previa (escritorio) */}
-              <div className="hidden h-28 items-center md:flex">
-                <div className="w-full origin-center transition-transform duration-500 ease-out group-hover:-rotate-1 group-hover:scale-105">
+              <div className="hidden h-24 items-center md:flex">
+                <div className="w-full origin-center scale-95 transition-transform duration-500 ease-out group-hover:-rotate-1 group-hover:scale-100">
                   <Preview />
                 </div>
               </div>
 
-              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-400 transition duration-300 group-hover:rotate-45 group-hover:border-accent-600 group-hover:bg-accent-600 group-hover:text-white dark:border-white/10 dark:text-slate-500 dark:group-hover:border-accent-500 dark:group-hover:bg-accent-500">
-                <ArrowUpRight size={20} strokeWidth={2.5} />
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-slate-200 text-slate-400 transition duration-300 group-hover:rotate-45 group-hover:border-accent-600 group-hover:bg-accent-600 group-hover:text-white dark:border-white/10 dark:text-slate-500 dark:group-hover:border-accent-500 dark:group-hover:bg-accent-500">
+                <ArrowUpRight size={18} strokeWidth={2.5} />
               </span>
             </button>
-          </motion.li>
+          </li>
         ))}
       </ol>
     </section>

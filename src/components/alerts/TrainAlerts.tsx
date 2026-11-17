@@ -10,7 +10,7 @@ interface AlertsButtonProps {
   size?: 'sm' | 'md';
 }
 
-/** Icono de aviso con el nº de alertas. No se renderiza si no hay ninguna. */
+/** Icono de aviso con el nº de avisos. No se renderiza si no hay ninguna. */
 export const AlertsButton = ({ count, open, onToggle, size = 'md' }: AlertsButtonProps) => {
   if (count === 0) return null;
   const dim = size === 'sm' ? 'h-8 w-8' : 'h-10 w-10';

@@ -5,13 +5,13 @@ export const COLORS = {
   // Colores por categoría de tren
   cercanias: '#ef2c30',      // Rojo Cercanías
   rodalies: '#f47216',       // Naranja Rodalies
-  altaVelocidad: '#851765',  // AVE / AVLO / Avant / Alvia / Euromed
+  altaVelocidad: '#0b3a6e',  // Azul marino · AVE / AVLO / Avant / Alvia / Euromed
   mediaDistancia: '#808080', // MD / Regional / Intercity
-  otros: '#1e3a8a',          // Bus y resto
+  otros: '#0d9488',          // Verde azulado · Bus y resto
 } as const;
 
 const ALTA_VELOCIDAD = new Set(['AVE', 'AVE INT', 'AVLO', 'ALVIA', 'AVANT', 'AVANT EXP', 'EUROMED']);
-const MEDIA_DISTANCIA = new Set(['MD', 'REGIONAL', 'REG.EXP.', 'PROXIMDAD', 'PROXIMIDAD', 'INTERCITY', 'TRENCELTA']);
+const MEDIA_DISTANCIA = new Set(['MEDIA_LARGA_DISTANCIA', 'MD','REGIONAL', 'REG.EXP.', 'PROXIMDAD', 'PROXIMIDAD', 'INTERCITY', 'TRENCELTA']);
 
 /** Color del marcador según el `tipo` GTFS del tren (mismas agrupaciones que la leyenda) */
 export const getTrainColor = (tipo: string): string => {

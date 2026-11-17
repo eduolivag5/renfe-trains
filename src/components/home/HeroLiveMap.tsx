@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
 import { ArrowUpRight } from 'lucide-react';
-import { geoConicConformal, geoPath } from 'd3-geo';
-import { feature, merge, mesh } from 'topojson-client';
-import type { GeometryCollection, MultiPolygon, Polygon, Topology } from 'topojson-specification';
+import { geoConicConformal, geoPath, type GeoProjection } from 'd3-geo';
+import { feature, mesh } from 'topojson-client';
+import type { GeometryCollection, Topology } from 'topojson-specification';
+import { onIdle } from '../../hooks/useReveal';
 import { trainsService, type TrainMap } from '../../api/trainsService';
 import { COLORS, getTrainColor } from '../map/MapConstants';
 
@@ -15,28 +15,70 @@ const H = 420;
 const POLL_MS = 30_000;
 
 const LEGEND = [
-  { label: 'Alta vel.', color: COLORS.altaVelocidad },
-  { label: 'Media dist.', color: COLORS.mediaDistancia },
+  { label: 'Alta velocidad', color: COLORS.altaVelocidad },
+  { label: 'Larga y media distancia', color: COLORS.mediaDistancia },
   { label: 'Cercanías', color: COLORS.cercanias },
   { label: 'Rodalies', color: COLORS.rodalies },
+  { label: 'Otros', color: COLORS.otros },
 ];
+
+const DOT_R = 2.8;
+
+interface Geo {
+  projection: GeoProjection;
+  neighbors: string;
+  land: string;
+  coast: string;
+  provinces: string;
+}
+
+/**
+ * Proyecta la geometría una vez. Sin `topojson.merge` (une polígonos y es lo más caro): la tierra
+ * se rellena con las provincias tal cual y la costa sale de `mesh` (aristas sin vecina).
+ */
+function buildGeo(topo: Topo): Geo {
+  const provinces = feature(topo, topo.objects.provinces);
+  const projection = geoConicConformal().parallels([36, 43.5]).rotate([3.6, 0]).fitExtent([[18, 18], [W - 18, H - 18]], provinces);
+  const path = geoPath(projection);
+  return {
+    projection,
+    neighbors: path(feature(topo, topo.objects.neighbors)) ?? '',
+    land: path(provinces) ?? '',
+    coast: path(mesh(topo, topo.objects.provinces, (a, b) => a === b)) ?? '',
+    provinces: path(mesh(topo, topo.objects.provinces, (a, b) => a !== b)) ?? '',
+  };
+}
+
+/** Círculo como subtrazado SVG (dos arcos): se concatenan todos los de un color en un único <path> */
+const circlePath = (x: number, y: number) =>
+  `M${(x - DOT_R).toFixed(1)} ${y.toFixed(1)}a${DOT_R} ${DOT_R} 0 1 0 ${DOT_R * 2} 0a${DOT_R} ${DOT_R} 0 1 0 ${-DOT_R * 2} 0`;
 
 /**
  * Mini mapa en directo para el Hero (solo escritorio): península con cada tren en circulación
- * como un punto de color según su tipo. SVG estático que se redibuja solo al llegar datos nuevos
- * (cada 30 s y solo con la pestaña visible): sin canvas ni animaciones por frame.
+ * como un punto de color según su tipo. Se redibuja solo al llegar datos nuevos (cada 30 s y solo
+ * con la pestaña visible).
+ *
+ * Rendimiento:
+ * - La geometría se calcula cuando el navegador está libre (requestIdleCallback), no en el render.
+ * - Los ~400 trenes son 5 <path> (uno por color), no 400 <circle>: DOM mínimo y un repintado barato.
+ * - Los puntos van en un <svg> propio superpuesto; su aparición es una animación CSS de opacidad
+ *   sobre ese elemento, que la GPU compone sin repintar el mapa base.
  */
 const HeroLiveMap = () => {
   const navigate = useNavigate();
-  const [topo, setTopo] = useState<Topo | null>(null);
+  const [geo, setGeo] = useState<Geo | null>(null);
   const [trains, setTrains] = useState<TrainMap[] | null>(null);
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null);
 
   useEffect(() => {
     let alive = true;
+    let cancelIdle = () => {};
     fetch('/map/spain.json')
       .then((r) => r.json() as Promise<Topo>)
-      .then((t) => alive && setTopo(t))
+      .then((t) => {
+        if (!alive) return;
+        cancelIdle = onIdle(() => alive && setGeo(buildGeo(t)));
+      })
       .catch(() => {});
     const load = () =>
       trainsService
@@ -51,32 +93,23 @@ const HeroLiveMap = () => {
     const id = setInterval(() => document.visibilityState === 'visible' && load(), POLL_MS);
     return () => {
       alive = false;
+      cancelIdle();
       clearInterval(id);
     };
   }, []);
 
-  // Geometría proyectada una sola vez
-  const geo = useMemo(() => {
-    if (!topo) return null;
-    const land = merge(topo, topo.objects.provinces.geometries as (Polygon | MultiPolygon)[]);
-    const projection = geoConicConformal().parallels([36, 43.5]).rotate([3.6, 0]).fitExtent([[18, 18], [W - 18, H - 18]], land);
-    const path = geoPath(projection);
-    return {
-      projection,
-      neighbors: path(feature(topo, topo.objects.neighbors)) ?? '',
-      land: path(land) ?? '',
-      provinces: path(mesh(topo, topo.objects.provinces, (a, b) => a !== b)) ?? '',
-    };
-  }, [topo]);
-
-  const dots = useMemo(() => {
+  // Un trazado por color con todos sus trenes
+  const dotPaths = useMemo(() => {
     if (!geo || !trains) return [];
-    return trains.flatMap((t) => {
+    const byColor = new Map<string, string[]>();
+    for (const t of trains) {
       const p = geo.projection([t.lon, t.lat]);
-      return p && p[0] >= 0 && p[0] <= W && p[1] >= 0 && p[1] <= H
-        ? [{ id: t.tripId, x: p[0], y: p[1], color: getTrainColor(t.tipo) }]
-        : [];
-    });
+      if (!p || p[0] < 0 || p[0] > W || p[1] < 0 || p[1] > H) continue;
+      const color = getTrainColor(t.tipo);
+      if (!byColor.has(color)) byColor.set(color, []);
+      byColor.get(color)!.push(circlePath(p[0], p[1]));
+    }
+    return [...byColor].map(([color, parts]) => ({ color, d: parts.join('') }));
   }, [geo, trains]);
 
   return (
@@ -100,30 +133,33 @@ const HeroLiveMap = () => {
 
       {/* Mapa */}
       <div className="relative bg-slate-50/60 dark:bg-white/[0.02]">
+        {/* Mapa base: estático, no se vuelve a pintar al llegar trenes nuevos */}
         <svg viewBox={`0 0 ${W} ${H}`} className="block h-[clamp(220px,44vh,420px)] w-full" role="img" aria-label="Mapa con la posición de los trenes en circulación">
-          {geo ? (
+          {geo && (
             <>
               <path d={geo.neighbors} className="fill-slate-100 dark:fill-white/[0.03]" />
-              <path d={geo.land} className="fill-white stroke-slate-200 dark:fill-slate-800/80 dark:stroke-white/10" strokeWidth={1} />
+              <path d={geo.land} className="fill-white dark:fill-slate-800/80" />
               <path d={geo.provinces} className="fill-none stroke-slate-100 dark:stroke-white/[0.06]" strokeWidth={0.75} />
-              <motion.g key={updatedAt?.getTime() ?? 0} initial={{ opacity: 0.4 }} animate={{ opacity: 1 }} transition={{ duration: 0.6 }}>
-                {dots.map((d) => (
-                  <circle key={d.id} cx={d.x} cy={d.y} r={2.8} fill={d.color} className="stroke-white dark:stroke-slate-900" strokeWidth={0.8} />
-                ))}
-              </motion.g>
+              <path d={geo.coast} className="fill-none stroke-slate-200 dark:stroke-white/10" strokeWidth={1} />
             </>
-          ) : (
-            <rect x={0} y={0} width={W} height={H} className="animate-pulse fill-slate-100 dark:fill-white/[0.04]" />
           )}
         </svg>
+        {/* Trenes: capa propia; `key` relanza el fundido CSS (opacidad en GPU) con cada actualización */}
+        {dotPaths.length > 0 && (
+          <svg key={updatedAt?.getTime() ?? 0} viewBox={`0 0 ${W} ${H}`} aria-hidden className="soft-fade pointer-events-none absolute inset-0 h-full w-full">
+            {dotPaths.map(({ color, d }) => (
+              <path key={color} d={d} fill={color} className="stroke-white dark:stroke-slate-900" strokeWidth={0.8} />
+            ))}
+          </svg>
+        )}
       </div>
 
       {/* Pie: leyenda + abrir mapa */}
       <div className="flex items-center justify-between gap-4 border-t border-slate-100 px-6 py-4 dark:border-white/5">
-        <ul className="flex flex-wrap gap-x-4 gap-y-1.5">
+        <ul className="flex min-w-0 flex-wrap gap-x-4 gap-y-1.5">
           {LEGEND.map((l) => (
-            <li key={l.label} className="flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-              <span className="h-2 w-2 rounded-full" style={{ background: l.color }} />
+            <li key={l.label} className="flex min-w-0 items-start gap-1.5 text-[11px] font-semibold leading-snug text-slate-500 dark:text-slate-400">
+              <span className="mt-[3px] h-2 w-2 shrink-0 rounded-full" style={{ background: l.color }} />
               {l.label}
             </li>
           ))}

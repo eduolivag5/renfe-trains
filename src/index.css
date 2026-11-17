@@ -153,3 +153,113 @@ html.dark {
 @utility px-page {
   padding-inline: var(--page-gutter);
 }
+
+/* --- PÁGINA DE AVISOS (/avisos) ---
+   Animaciones solo de opacity + transform en CSS: el navegador las compone en la GPU en su
+   propio hilo, sin JavaScript por frame, aunque el hilo principal esté ocupado renderizando. */
+@keyframes alert-in {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+}
+/* Entrada escalonada: --i = posición de la fila (solo las primeras llevan la clase) */
+.alert-enter {
+  animation: alert-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--i, 0) * 30ms);
+}
+/* Página y bloques que aparecen (estado vacío): mismo efecto sin escalonar */
+.fade-up {
+  animation: alert-in 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+/* Filas fuera de pantalla: ni se maquetan ni se pintan hasta acercarse al viewport.
+   `auto` recuerda la altura real ya medida para que la barra de scroll no salte. */
+.alert-row {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 9rem;
+}
+@media (prefers-reduced-motion: reduce) {
+  .alert-enter,
+  .fade-up {
+    animation: none;
+  }
+}
+
+/* --- ANIMACIONES DE LA HOME ---
+   Todo con opacity + transform en CSS: lo compone la GPU en su propio hilo, sin JavaScript por
+   frame (framer-motion anima x/y/scaleX en el hilo principal). */
+@keyframes rise-in {
+  from { opacity: 0; transform: translate3d(0, 16px, 0); }
+}
+@keyframes grow-x {
+  from { transform: scaleX(0); }
+}
+/* Entrada al cargar (Hero): --delay escalona los bloques */
+.rise-in {
+  animation: rise-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) var(--delay, 0ms) both;
+}
+/* Barras que crecen al aparecer. `backwards`: al terminar manda el estilo en línea y los
+   cambios posteriores (datos nuevos) se animan con la transición */
+.grow-x {
+  transform-origin: left;
+  animation: grow-x 0.8s cubic-bezier(0.16, 1, 0.3, 1) var(--delay, 0ms) backwards;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+/* Aparición al entrar en pantalla: el hook useReveal añade .is-visible */
+.reveal {
+  opacity: 0;
+  transform: translate3d(0, 16px, 0);
+  transition:
+    opacity 0.5s cubic-bezier(0.16, 1, 0.3, 1) var(--delay, 0ms),
+    transform 0.5s cubic-bezier(0.16, 1, 0.3, 1) var(--delay, 0ms);
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+/* Tren entrando en la estación (TrainFamilies) */
+.train-arrive {
+  transform: translate3d(-75%, 0, 0);
+  transition: transform 1.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.is-visible .train-arrive {
+  transform: none;
+}
+.train-caption {
+  opacity: 0;
+  transition: opacity 0.6s ease 0.9s;
+}
+.is-visible .train-caption {
+  opacity: 1;
+}
+/* Secciones bajo el pliegue: no se maquetan ni pintan hasta acercarse a la pantalla */
+.cv-section {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 900px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .rise-in,
+  .grow-x {
+    animation: none;
+  }
+  .reveal,
+  .train-arrive,
+  .train-caption {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+/* Fundido suave al llegar datos nuevos (puntos del mini mapa, total de trenes) */
+@keyframes soft-fade {
+  from { opacity: 0.35; }
+}
+.soft-fade {
+  animation: soft-fade 0.6s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .soft-fade {
+    animation: none;
+  }
+}
+/* Color de fondo de la página actual, para degradados que se funden con él (TrainFamilies).
+   Por defecto el de la app; la home lo redefine (fondo blanco). */
+:root { --page-bg: #f8fafc; }
+.dark { --page-bg: #020617; }

@@ -3,6 +3,7 @@ import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import { ArrowRight, Map, Search } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { getTrainLogo } from '../../utils/trainUtils';
+import { onIdle } from '../../hooks/useReveal';
 
 // Mini mapa en directo: chunk aparte (d3-geo + geometría) y solo en pantallas grandes
 const HeroLiveMap = lazy(() => import('./HeroLiveMap'));
@@ -58,12 +59,14 @@ const RotatingDestination: React.FC = () => {
 
   return (
     <span className="relative block h-[1.3em] overflow-hidden">
-      <AnimatePresence mode="popLayout" initial={false}>
+      {/* Las dos palabras van en absoluto: no hace falta medir (popLayout). Se anima la propiedad
+          `transform` completa (no y), que framer-motion delega en el compositor (WAAPI). */}
+      <AnimatePresence initial={false}>
         <motion.span
           key={DESTINATIONS[index]}
-          initial={{ y: '100%', opacity: 0 }}
-          animate={{ y: '0%', opacity: 1 }}
-          exit={{ y: '-100%', opacity: 0 }}
+          initial={{ transform: 'translateY(100%)', opacity: 0 }}
+          animate={{ transform: 'translateY(0%)', opacity: 1 }}
+          exit={{ transform: 'translateY(-100%)', opacity: 0 }}
           transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
           className="absolute inset-x-0 leading-[1.3] text-accent-700 dark:text-accent-400 lg:right-auto"
         >
@@ -78,15 +81,37 @@ const RotatingDestination: React.FC = () => {
 /* Hero                                                                */
 /* ------------------------------------------------------------------ */
 
-const fadeUp = (delay = 0) => ({
-  initial: { opacity: 0, y: 16 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.6, delay, ease: [0.22, 1, 0.36, 1] as const },
-});
+/** Retardo de la entrada en CSS (.rise-in): opacity + transform compuestos en GPU, sin JS por frame */
+const riseIn = (delayMs = 0) => ({ style: { '--delay': `${delayMs}ms` } as React.CSSProperties });
+
+/** Hueco del mini mapa mientras llega: mismo marco y alturas que HeroLiveMap (sin saltos) */
+const MAP_PLACEHOLDER = (
+  <div className="w-full max-w-[520px] overflow-hidden rounded-3xl border border-slate-200/80 bg-white dark:border-white/[0.07] dark:bg-slate-900/70">
+    <div className="h-[61px] border-b border-slate-100 dark:border-white/5" />
+    <div className="h-[clamp(220px,44vh,420px)] bg-slate-50/60 dark:bg-white/[0.02]" />
+    <div className="h-[73px] border-t border-slate-100 dark:border-white/5" />
+  </div>
+);
+
+/** El mini mapa se monta cuando el navegador queda libre, tras la animación de entrada */
+const MAP_DELAY_MS = 700;
 
 const HeroSection: React.FC = () => {
   const navigate = useNavigate();
   const isLg = useIsLg();
+  const [mapReady, setMapReady] = useState(false);
+
+  useEffect(() => {
+    if (!isLg) return;
+    let cancelIdle = () => {};
+    const t = setTimeout(() => {
+      cancelIdle = onIdle(() => setMapReady(true));
+    }, MAP_DELAY_MS);
+    return () => {
+      clearTimeout(t);
+      cancelIdle();
+    };
+  }, [isLg]);
 
   const scrollToSearch = () =>
     document.getElementById('search-section')?.scrollIntoView({ behavior: 'smooth' });
@@ -105,33 +130,25 @@ const HeroSection: React.FC = () => {
           <div className="grid w-full grid-cols-1 items-center gap-16 lg:grid-cols-[1.15fr_1fr]">
             {/* Texto */}
             <div className="flex flex-col items-center text-center lg:items-start lg:text-left">
-              <motion.div
-                {...fadeUp(0)}
-                className="inline-flex items-center gap-2 rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-slate-600 dark:border-white/10 dark:text-slate-300"
-              >
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                Datos de la red en tiempo real
-              </motion.div>
-
-              <motion.h1
-                {...fadeUp(0.08)}
-                className="mt-5 text-[2.3rem] font-extrabold leading-[1.05] tracking-tight text-slate-900 sm:text-6xl md:mt-8 md:text-[clamp(3rem,min(5vw,9vh),4.5rem)] compact:mt-6 dark:text-white"
+              <h1
+                {...riseIn(0)}
+                className="rise-in text-[2.3rem] font-extrabold leading-[1.05] tracking-tight text-slate-900 sm:text-6xl md:text-[clamp(3rem,min(5vw,9vh),4.5rem)] dark:text-white"
               >
                 Tu próximo tren
                 <br />
                 <span className="font-semibold text-slate-400 dark:text-slate-500">con destino a</span>
                 <RotatingDestination />
-              </motion.h1>
+              </h1>
 
-              <motion.p
-                {...fadeUp(0.16)}
-                className="mt-4 max-w-xl text-[15px] leading-relaxed text-slate-500 md:mt-6 md:text-lg compact:mt-5 dark:text-slate-400"
+              <p
+                {...riseIn(160)}
+                className="rise-in mt-4 max-w-xl text-[15px] leading-relaxed text-slate-500 md:mt-6 md:text-lg compact:mt-5 dark:text-slate-400"
               >
                 Consulta horarios, sigue cada tren sobre el mapa y descubre las salidas de toda la red
                 ferroviaria española.
-              </motion.p>
+              </p>
 
-              <motion.div {...fadeUp(0.24)} className="mt-7 grid w-full grid-cols-2 gap-2.5 sm:flex sm:w-auto sm:gap-3 md:mt-10 compact:mt-9">
+              <div {...riseIn(240)} className="rise-in mt-7 grid w-full grid-cols-2 gap-2.5 sm:flex sm:w-auto sm:gap-3 md:mt-10 compact:mt-9">
                 <button
                   onClick={scrollToSearch}
                   className="group inline-flex items-center justify-center gap-2 rounded-xl bg-slate-900 px-3 py-3 text-[15px] font-semibold text-white sm:px-7 sm:py-3.5 sm:text-base transition-colors hover:bg-accent-700 active:scale-[0.98] dark:bg-white dark:text-slate-900 dark:hover:bg-accent-200"
@@ -148,12 +165,12 @@ const HeroSection: React.FC = () => {
                   <Map size={18} />
                   <span>Mapa en vivo</span>
                 </button>
-              </motion.div>
+              </div>
 
               {/* Métricas */}
-              <motion.dl
-                {...fadeUp(0.32)}
-                className="mt-8 grid w-full max-w-md grid-cols-3 divide-x divide-slate-200 md:mt-12 compact:mt-10 dark:divide-white/10"
+              <dl
+                {...riseIn(320)}
+                className="rise-in mt-8 grid w-full max-w-md grid-cols-3 divide-x divide-slate-200 md:mt-12 compact:mt-10 dark:divide-white/10"
               >
                 {[
                   { value: '24/7', label: 'Tiempo real' },
@@ -165,17 +182,18 @@ const HeroSection: React.FC = () => {
                     <dd className="text-xl font-bold tracking-tight text-slate-900 md:text-2xl dark:text-white">{s.value}</dd>
                   </div>
                 ))}
-              </motion.dl>
+              </dl>
             </div>
 
-            {/* Mini mapa en directo (solo pantallas grandes; en móvil ni se descarga) */}
-            <motion.div {...fadeUp(0.3)} className="hidden lg:flex lg:justify-end">
+            {/* Mini mapa en directo (solo pantallas grandes; en móvil ni se descarga). Se monta
+                cuando termina la entrada y el navegador queda libre, para no competir con ella. */}
+            <div {...riseIn(300)} className="rise-in hidden lg:flex lg:justify-end">
               {isLg && (
-                <Suspense fallback={<div className="aspect-[520/526] w-full max-w-[520px] animate-pulse rounded-3xl bg-slate-100 dark:bg-white/[0.04]" />}>
-                  <HeroLiveMap />
+                <Suspense fallback={MAP_PLACEHOLDER}>
+                  {mapReady ? <HeroLiveMap /> : MAP_PLACEHOLDER}
                 </Suspense>
               )}
-            </motion.div>
+            </div>
           </div>
         </div>
 

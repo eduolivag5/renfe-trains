@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useState, useEffect, useLayoutEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import SettingsPage from './pages/SettingsPage';
 import Navbar from './ui/Navbar';
@@ -6,6 +6,7 @@ import HomePage from './pages/HomePage';
 import SearchResultsPage from './pages/SearchResultsPage';
 import TrainsPage from './pages/TrainsPage';
 import AlertsPage from './pages/AlertsPage';
+import { useSmoothWheelScroll } from './hooks/useSmoothWheelScroll';
 import { clearPrefs, getPref, setPref, systemPrefersDark } from './utils/preferences';
 
 // El mapa (d3 + geometría) va en su propio chunk: solo se descarga al abrir /mapa
@@ -20,6 +21,8 @@ function AppContent({ isDarkMode, toggleTheme, resetPreferences }: { isDarkMode:
   // Al cambiar de página volvemos arriba antes del pintado (sin ver la página nueva a media altura).
   // Solo depende del pathname: cambiar parámetros (p. ej. el día en /buscar) conserva la posición.
   const mainRef = useRef<HTMLElement>(null);
+  // Rueda del ratón: desplazamiento suave en lugar de saltos (no en el mapa, que usa la rueda para el zoom)
+  useSmoothWheelScroll(mainRef, !isMapPath);
   useLayoutEffect(() => {
     mainRef.current?.scrollTo({ top: 0, left: 0, behavior: 'instant' });
   }, [location.pathname]);
@@ -50,7 +53,9 @@ function AppContent({ isDarkMode, toggleTheme, resetPreferences }: { isDarkMode:
               <Route path="/ajustes" element={<SettingsPage isDarkMode={isDarkMode} toggleTheme={toggleTheme} onReset={resetPreferences} />} />
               <Route path="/trenes" element={<TrainsPage />} />
               <Route path="/buscar" element={<SearchResultsPage />} />
-              <Route path="/alertas" element={<AlertsPage />} />
+              <Route path="/avisos" element={<AlertsPage />} />
+              {/* Dirección antigua: redirige conservando los filtros (?nucleo=…) */}
+              <Route path="/alertas" element={<Navigate to={{ pathname: '/avisos', search: location.search }} replace />} />
             </Routes>
           </div>
         </main>

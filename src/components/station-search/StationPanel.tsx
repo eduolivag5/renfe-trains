@@ -98,7 +98,7 @@ export const StationPanel = memo(
             </div>
           )}
 
-          <div className="flex h-12 items-center gap-2.5 rounded-2xl border border-slate-200 bg-white px-3.5 shadow-sm transition-colors focus-within:border-accent-500 focus-within:ring-4 focus-within:ring-accent-500/10 dark:border-white/10 dark:bg-white/[0.04] dark:focus-within:border-accent-400">
+          <div className="flex h-12 items-center gap-2.5 rounded-2xl border border-slate-200 bg-white px-3.5 shadow-sm dark:border-white/10 dark:bg-white/[0.04]">
             <Search size={18} className="shrink-0 text-slate-400" strokeWidth={2.5} />
             <input
               ref={inputRef}

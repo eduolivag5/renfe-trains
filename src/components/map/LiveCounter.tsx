@@ -10,8 +10,8 @@ interface LiveCounterProps {
 }
 
 const CATEGORIES = [
-  { label: 'Alta vel.', color: COLORS.altaVelocidad },
-  { label: 'Media dist.', color: COLORS.mediaDistancia },
+  { label: 'Alta velocidad', color: COLORS.altaVelocidad },
+  { label: 'Larga y media distancia', color: COLORS.mediaDistancia },
   { label: 'Cercanías', color: COLORS.cercanias },
   { label: 'Rodalies', color: COLORS.rodalies },
   { label: 'Otros', color: COLORS.otros },
@@ -70,7 +70,7 @@ export const LiveCounter: React.FC<LiveCounterProps> = ({ trains }) => {
       transition={{ layout: { duration: 0.45, ease: [0.16, 1, 0.3, 1] } }}
       style={{ borderRadius: 24 }}
       className={`absolute left-4 top-4 z-40 select-none overflow-hidden border border-slate-200/80 bg-white/95 shadow-[0_16px_40px_-16px_rgba(2,33,71,0.35)] md:left-6 md:top-6 dark:border-white/10 dark:bg-slate-900/95 dark:shadow-none ${
-        hidden ? '' : 'pointer-events-none w-[calc(100vw-6rem)] max-w-[290px]'
+        hidden ? '' : 'pointer-events-none w-[calc(100vw-6rem)] max-w-[290px] lg:max-w-[232px]' // PC: un 20 % más estrecha para no tapar la península
       }`}
     >
       <AnimatePresence mode="popLayout" initial={false}>
@@ -103,7 +103,7 @@ export const LiveCounter: React.FC<LiveCounterProps> = ({ trains }) => {
             initial={{ opacity: 0, y: -6 }}
             animate={{ opacity: 1, y: 0, transition: { duration: 0.3, delay: 0.18 } }}
             exit={{ opacity: 0, transition: { duration: 0.15 } }}
-            className="p-4"
+            className="p-4 lg:p-3.5"
           >
             {/* En directo + reloj + ocultar */}
             <div className="flex items-center justify-between gap-2">
@@ -130,10 +130,10 @@ export const LiveCounter: React.FC<LiveCounterProps> = ({ trains }) => {
 
             {/* Total */}
             <p className="mt-3 flex items-baseline gap-2">
-              <span className="text-[32px] font-black leading-none tracking-tight tabular-nums text-slate-900 dark:text-white">
+              <span className="text-[32px] font-black leading-none tracking-tight tabular-nums lg:text-[28px] text-slate-900 dark:text-white">
                 {total.toLocaleString('es-ES')}
               </span>
-              <span className="text-[13px] font-semibold text-slate-500 dark:text-slate-400">trenes circulando</span>
+              <span className="text-[13px] font-semibold text-slate-500 lg:text-[12px] dark:text-slate-400">trenes circulando</span>
             </p>
 
             {/* Reparto proporcional */}
@@ -149,12 +149,13 @@ export const LiveCounter: React.FC<LiveCounterProps> = ({ trains }) => {
               )}
             </div>
 
-            {/* Leyenda con recuentos */}
-            <ul className="mt-3 grid grid-cols-2 gap-x-4 gap-y-1.5">
+            {/* Leyenda con recuentos: una columna ("Larga y media distancia" no cabe en media) */}
+            <ul className="mt-3 grid gap-y-1">
               {counts.map((c) => (
-                <li key={c.label} className="flex items-center gap-2 text-[12px]">
-                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: c.color }} />
-                  <span className="min-w-0 flex-1 truncate font-semibold text-slate-600 dark:text-slate-300">{c.label}</span>
+                <li key={c.label} className="flex items-start gap-2 text-[12px] leading-snug">
+                  <span className="mt-[3px] h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: c.color }} />
+                  {/* Sin truncar: si el nombre no cabe, pasa a la línea siguiente */}
+                  <span className="min-w-0 flex-1 font-semibold text-slate-600 dark:text-slate-300">{c.label}</span>
                   <span className="font-bold tabular-nums text-slate-900 dark:text-white">{c.count}</span>
                 </li>
               ))}

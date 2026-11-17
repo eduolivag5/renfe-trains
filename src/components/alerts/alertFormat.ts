@@ -1,6 +1,10 @@
 import type { ServiceAlert } from '../../api/alertsService';
 
-/** Núcleos de Cercanías/Rodalies según el prefijo del route_id GTFS ("10T0110C9" → 10) */
+/**
+ * Núcleos de Cercanías/Rodalies según el prefijo del route_id GTFS ("10T0110C9" → 10).
+ * Lista completa sacada de routes.txt del GTFS de Cercanías de Renfe (fomento_transit.zip).
+ * 45, 46 y 47 son las antiguas líneas de ancho métrico (ex-FEVE).
+ */
 const NETWORK_NAMES: Record<string, string> = {
   '10': 'Madrid',
   '20': 'Asturias',
@@ -9,11 +13,18 @@ const NETWORK_NAMES: Record<string, string> = {
   '32': 'Málaga',
   '40': 'Valencia',
   '41': 'Murcia / Alicante',
+  '45': 'Cartagena',
+  '46': 'Ferrol',
+  '47': 'León',
   '51': 'Rodalies Catalunya',
   '60': 'Bilbao',
   '61': 'San Sebastián',
   '62': 'Santander',
+  '70': 'Zaragoza',
 };
+
+/** Todos los núcleos [código, nombre], por orden alfabético (índice estático de la home) */
+export const NETWORK_LIST = Object.entries(NETWORK_NAMES).sort(([, a], [, b]) => a.localeCompare(b, 'es'));
 
 export const GENERAL_KEY = 'general';
 
@@ -24,26 +35,32 @@ const GTFS_ROUTE = /^(\d{2})T\d{4}(.+)$/i;
 
 export interface AlertView {
   alert: ServiceAlert;
-  /** Núcleos afectados (o [GENERAL_KEY] si la alerta no indica líneas) */
+  /** Núcleos afectados (o [GENERAL_KEY] si el aviso no indica líneas) */
   networks: string[];
   /** Líneas únicas y ordenadas: "C1", "R2N"… */
   lines: string[];
+  /** Líneas afectadas en cada núcleo ({"10": ["C1", "C10"]}): "C1" de Madrid ≠ "C1" de Sevilla */
+  linesByNetwork: Record<string, string[]>;
   start: Date | null;
   /** Empieza más adelante (p. ej. una huelga anunciada para mañana) */
   upcoming: boolean;
   isWarning: boolean;
 }
 
-const lineSort = (a: string, b: string) => a.localeCompare(b, 'es', { numeric: true });
+export const lineSort = (a: string, b: string) => a.localeCompare(b, 'es', { numeric: true });
 
 export function toAlertView(alert: ServiceAlert, now = Date.now()): AlertView {
   const networks = new Set<string>();
   const lines = new Set<string>();
+  const byNetwork = new Map<string, Set<string>>();
   for (const rid of alert.routeIds ?? []) {
     const m = rid.match(GTFS_ROUTE);
     if (!m) continue;
+    const line = m[2].toUpperCase();
     networks.add(m[1]);
-    lines.add(m[2].toUpperCase());
+    lines.add(line);
+    if (!byNetwork.has(m[1])) byNetwork.set(m[1], new Set());
+    byNetwork.get(m[1])!.add(line);
   }
   const d = new Date(alert.fechaInicio);
   const start = Number.isNaN(d.getTime()) ? null : d;
@@ -51,6 +68,7 @@ export function toAlertView(alert: ServiceAlert, now = Date.now()): AlertView {
     alert,
     networks: networks.size ? [...networks].sort() : [GENERAL_KEY],
     lines: [...lines].sort(lineSort),
+    linesByNetwork: Object.fromEntries([...byNetwork].map(([n, ls]) => [n, [...ls].sort(lineSort)])),
     start,
     upcoming: !!start && start.getTime() > now,
     isWarning: alert.alertId.startsWith('AVISO'),
