@@ -7,17 +7,18 @@ import { trainsService, type TrainSearchResult } from '../api/trainsService';
 import { estacionesService } from '../api/estacionesService';
 import StationSearch from '../components/station-search/StationSearch';
 import { processTrainData } from '../utils/trainUtils';
-import { prettyName } from '../utils/stationUtils';
+import { prettyName, stationCity, type StationPlace } from '../utils/stationUtils';
 import PopularRoutes from '../components/search-results/PopularRoutes';
 import { SearchHeader } from '../components/search-results/SearchHeader';
 import { TrainResults } from '../components/search-results/TrainResults';
 import type { ProcessedTrain } from '../components/search-results/TrainCard';
 import TrainSkeleton from '../components/search-results/TrainSkeleton';
+import SavedTrips from '../components/search-results/SavedTrips';
+import { addRecentTrip, type SavedTrip } from '../utils/savedTrips';
+import { Eyebrow } from '../ui/heading';
+import { HEADING, LEAD } from '../ui/headingStyles';
 
-interface StationDetail {
-  nombre: string;
-  provincia: string;
-}
+type StationDetail = StationPlace;
 
 const CARD =
   'rounded-[28px] border border-slate-200/80 bg-white p-1.5 shadow-[0_1px_2px_rgba(2,33,71,0.04),0_24px_48px_-24px_rgba(2,33,71,0.25)] dark:border-white/[0.07] dark:bg-slate-900/70 dark:shadow-none';
@@ -29,13 +30,9 @@ const CARD =
 const SearchLanding = () => (
     <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-12 pb-12">
       <header className="max-w-2xl space-y-4">
-        <div className="inline-flex items-center gap-2 rounded-full bg-accent-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-accent-600 dark:text-accent-400">
-          <Search size={14} /> Buscar
-        </div>
-        <h1 className="text-3xl font-black leading-none tracking-tighter text-slate-900 md:text-5xl dark:text-white">
-          ¿A dónde quieres ir?
-        </h1>
-        <p className="text-base leading-relaxed text-slate-500 md:text-lg dark:text-slate-400">
+        <Eyebrow icon={Search}>Buscar</Eyebrow>
+        <h1 className={HEADING.page}>¿A dónde quieres ir?</h1>
+        <p className={LEAD}>
           Elige origen, destino y fecha para ver todos los trenes del día.
         </p>
       </header>
@@ -43,6 +40,8 @@ const SearchLanding = () => (
       <div className={CARD}>
         <StationSearch variant="wide" />
       </div>
+
+      <SavedTrips />
 
       <section className="space-y-4">
         <h2 className="flex items-center gap-2 px-1 text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">
@@ -62,7 +61,8 @@ const SearchResultsPage = () => {
 
   const [trains, setTrains] = useState<TrainSearchResult[]>([]);
   const [loading, setLoading] = useState(true);
-  const [stations, setStations] = useState<{ origin?: StationDetail; destination?: StationDetail }>({});
+  // `key`: par de códigos al que pertenecen los nombres (al cambiar de búsqueda, los anteriores no valen)
+  const [stations, setStations] = useState<{ key?: string; origin?: StationDetail; destination?: StationDetail }>({});
   const [editing, setEditing] = useState(false);
 
   const origin = searchParams.get('origin');
@@ -96,14 +96,27 @@ const SearchResultsPage = () => {
   useEffect(() => {
     if (!hasParams) return;
     Promise.all([estacionesService.getById(origin!), estacionesService.getById(destination!)])
-      .then(([o, d]) => setStations({ origin: o, destination: d }))
+      .then(([o, d]) => setStations({ key: `${origin}|${destination}`, origin: o, destination: d }))
       .catch((error) => console.error('Error cargando detalles de estaciones:', error));
   }, [origin, destination, hasParams]);
+
+  // Trayecto actual con nombres (para favoritos, compartir y "recientes")
+  const trip = useMemo<SavedTrip | undefined>(() => {
+    if (!hasParams || stations.key !== `${origin}|${destination}` || !stations.origin || !stations.destination) return undefined;
+    return { origin: origin!, destination: destination!, originName: stations.origin.nombre, destinationName: stations.destination.nombre };
+  }, [hasParams, origin, destination, stations]);
+
+  // Cada búsqueda queda en "Tus trayectos" como reciente
+  useEffect(() => {
+    if (trip) addRecentTrip(trip);
+  }, [trip]);
 
   const processedTrains = useMemo(() => processTrainData(trains) as ProcessedTrain[], [trains]);
 
   const handleDateChange = (newDate: string) => {
     if (newDate === date) return;
+    // Día nuevo, lista nueva: se vuelve arriba para ver los primeros trenes (el scroll vive en <main>)
+    document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' });
     setSearchParams(
       (prev) => {
         prev.set('date', newDate);
@@ -119,19 +132,19 @@ const SearchResultsPage = () => {
   const stationsReady = !!(stations.origin && stations.destination);
 
   return (
-    <div className="space-y-5 pb-12">
-      {/* Resumen del trayecto (fijo arriba en escritorio) */}
-      <div>
-        <SearchHeader
-          originDetail={stations.origin}
-          destinationDetail={stations.destination}
-          date={date!}
-          loading={loading}
-          editing={editing}
-          onDateChange={handleDateChange}
-          onEditSearch={() => setEditing((v) => !v)}
-        />
-      </div>
+    <div className="pb-12 [&>*+*:not(header)]:mt-7 md:[&>*+*:not(header)]:mt-5">
+      {/* Resumen del trayecto y tira de días: fijo arriba al hacer scroll. Sin envoltorio: el
+          contenedor de un sticky tiene que ser la página entera para que acompañe todo el scroll */}
+      <SearchHeader
+        originDetail={stations.origin}
+        destinationDetail={stations.destination}
+        trip={trip}
+        date={date!}
+        loading={loading}
+        editing={editing}
+        onDateChange={handleDateChange}
+        onEditSearch={() => setEditing((v) => !v)}
+      />
 
       {/* Modificar búsqueda: el buscador, ya relleno, se despliega aquí mismo */}
       <AnimatePresence initial={false}>
@@ -160,10 +173,19 @@ const SearchResultsPage = () => {
       <div
         className="flex min-w-0 flex-col gap-3"
       >
-        {loading ? (
+        {/* Al cambiar de día, TrainResults sigue montado con los trenes anteriores y solo la lista
+            pasa a esqueleto: la barra de filtros no desaparece (la lista no sube) y los filtros
+            elegidos se conservan. El esqueleto suelto es solo para la primera carga. */}
+        {loading && processedTrains.length === 0 ? (
           <div className="grid gap-2.5 2xl:grid-cols-2">{Array.from({ length: 6 }).map((_, i) => <TrainSkeleton key={i} />)}</div>
         ) : processedTrains.length > 0 ? (
-          <TrainResults trains={processedTrains} date={date!} onNextDay={() => handleDateChange(nextDay)} />
+          <TrainResults
+            loading={loading}
+            trains={processedTrains}
+            date={date!}
+            route={stationsReady ? { from: stationCity(stations.origin!), to: stationCity(stations.destination!) } : undefined}
+            onNextDay={() => handleDateChange(nextDay)}
+          />
         ) : (
           !loading && (
             <div className="flex flex-col items-center rounded-3xl border border-dashed border-slate-200 px-6 py-16 text-center dark:border-white/10">

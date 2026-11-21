@@ -7,6 +7,15 @@ import TrainItinerary from './TrainItinerary';
 import { getMapTrainInfo, isRodalies } from '../../utils/trainUtils';
 import { useTrainAlerts } from '../../hooks/useTrainAlerts';
 import { AlertsButton, AlertsList } from '../alerts/TrainAlerts';
+import { useSheetMotion } from '../../hooks/useSheetMotion';
+import { useBreakpoint } from '../../hooks/use-breakpoint';
+
+/** PC: aparece desde abajo con un recorrido corto y frenada suave; al cerrar, se desvanece bajando un poco */
+const DESKTOP_MOTION = {
+  initial: { opacity: 0, y: 48 },
+  animate: { opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] as const } },
+  exit: { opacity: 0, y: 24, transition: { duration: 0.2, ease: [0.4, 0, 1, 1] as const } },
+};
 
 interface DetailPanelProps {
   train: TrainMap;
@@ -20,6 +29,9 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const DetailPanel: React.FC<DetailPanelProps> = ({ train, onClose }) => {
+  // Móvil: animación común de los paneles (fundido + 16 px, ver useSheetMotion)
+  const isDesktop = useBreakpoint('md');
+  const sheetMotion = useSheetMotion();
   const [detail, setDetail] = useState<TrainDetail | null>(null);
   // Avisos de la línea del tren (icono junto a cerrar; lista desplegable bajo la cabecera)
   const alerts = useTrainAlerts({ tripId: train.tripId, tipo: train.tipo, routeId: detail?.routeId });
@@ -86,10 +98,7 @@ const DetailPanel: React.FC<DetailPanelProps> = ({ train, onClose }) => {
 
   return (
     <motion.div
-      // Aparece desde abajo con un recorrido corto y frenada suave (sin rebote); al cerrar, se desvanece bajando un poco
-      initial={{ opacity: 0, y: 48 }}
-      animate={{ opacity: 1, y: 0, transition: { duration: 0.45, ease: [0.16, 1, 0.3, 1] } }}
-      exit={{ opacity: 0, y: 24, transition: { duration: 0.2, ease: [0.4, 0, 1, 1] } }}
+      {...(isDesktop ? DESKTOP_MOTION : sheetMotion)}
       className="absolute bottom-[calc(env(safe-area-inset-bottom)+5.25rem)] md:bottom-6 left-0 right-0 z-50 px-3 pointer-events-none"
     >
       <div className={`

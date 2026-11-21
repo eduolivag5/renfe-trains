@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowUpRight, MapPin, Radio, RefreshCw } from 'lucide-react';
 import { trainsService, type TrainMap } from '../../api/trainsService';
 import { CITIES, COLORS, getTrainColor } from '../map/MapConstants';
+import { Eyebrow } from '../../ui/heading';
+import { HEADING, LEAD } from '../../ui/headingStyles';
 
 const POLL_MS = 30_000;
 /** Radio para asignar un tren a una ciudad (km) */
@@ -13,7 +15,6 @@ const CATEGORIES = [
   { label: 'Larga y media distancia', color: COLORS.mediaDistancia },
   { label: 'Cercanías', color: COLORS.cercanias },
   { label: 'Rodalies', color: COLORS.rodalies },
-  { label: 'Otros', color: COLORS.otros },
 ];
 
 /** Distancia aproximada en km (equirectangular: sobra precisión para radios de decenas de km) */
@@ -102,13 +103,9 @@ const LiveNetwork = () => {
       <div className="min-w-0 space-y-8 compact:space-y-6">
         {/* Cabecera */}
         <div className="max-w-2xl space-y-3">
-          <div className="inline-flex items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-emerald-700 dark:text-emerald-400">
-            <Radio size={14} /> En directo
-          </div>
-          <h2 className="text-3xl font-black leading-none tracking-tighter text-slate-900 md:text-4xl lg:leading-[1.1] dark:text-white">
-            La red, ahora mismo
-          </h2>
-          <p className="text-base leading-relaxed text-slate-500 md:text-lg dark:text-slate-400">
+          <Eyebrow icon={Radio}>En directo</Eyebrow>
+          <h2 className={HEADING.section}>La red, ahora mismo</h2>
+          <p className={LEAD}>
             Trenes circulando en este momento según su posición en tiempo real.
           </p>
         </div>

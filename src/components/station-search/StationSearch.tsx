@@ -1,7 +1,6 @@
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { createPortal } from 'react-dom';
-import { ArrowUpDown, Search, X } from 'lucide-react';
+import { ArrowUpDown, Search } from 'lucide-react';
 import { differenceInCalendarDays, format, startOfDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { useNavigate } from 'react-router-dom';
@@ -9,6 +8,9 @@ import { useNavigate } from 'react-router-dom';
 import { estacionesService } from '../../api/estacionesService';
 import CustomCalendar from '../../ui/CustomCalendar';
 import { DateField, StationField } from './StationTriggers';
+import { POPOVER } from './fieldStyles';
+import BottomSheet from '../../ui/BottomSheet';
+import FullScreenSheet from '../../ui/FullScreenSheet';
 import { StationPanel } from './StationPanel';
 import type { Estacion } from '../../utils/stationUtils';
 
@@ -24,9 +26,6 @@ interface StationSearchProps {
   /** Se llama tras lanzar la búsqueda (p. ej. para plegar el formulario) */
   onSearch?: () => void;
 }
-
-const POPOVER =
-  'absolute top-full z-50 mt-2 overflow-hidden rounded-3xl border border-slate-200/80 bg-white shadow-[0_24px_60px_-20px_rgba(2,33,71,0.35)] dark:border-white/10 dark:bg-slate-900 dark:shadow-[0_24px_60px_-20px_rgba(0,0,0,0.8)]';
 
 /** "Hoy", "Mañana" o el día de la semana */
 const relativeDay = (d: Date) => {
@@ -131,6 +130,10 @@ const StationSearch = ({ variant = 'stacked', initialOrigin = null, initialDesti
     navigate(`/buscar?${params.toString()}`);
     onSearch?.();
   };
+
+  // Último campo de estación abierto: el panel de móvil lo sigue mostrando mientras se cierra
+  const [sheetField, setSheetField] = useState<Field>('origin');
+  if ((open === 'origin' || open === 'destination') && open !== sheetField) setSheetField(open);
 
   const panelFor = (field: Field, mobile = false) => (
     <StationPanel
@@ -271,63 +274,15 @@ const StationSearch = ({ variant = 'stacked', initialOrigin = null, initialDesti
         </div>
       </div>
 
-      {/* Móvil: paneles en portal (un ancestro con transform convertiría "fixed" en relativo a él) */}
-      {createPortal(
-        <>
-      {/* ---------- Móvil: selector de estación a pantalla completa ---------- */}
-      <AnimatePresence>
-        {(open === 'origin' || open === 'destination') && (
-          <motion.div
-            key="mobile-station"
-            initial={{ y: '100%' }}
-            animate={{ y: 0 }}
-            exit={{ y: '100%' }}
-            transition={{ type: 'spring', stiffness: 380, damping: 38 }}
-            className="fixed inset-0 z-[90] flex flex-col md:hidden"
-          >
-            {panelFor(open, true)}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* ---------- Móvil: selector de estación a pantalla completa (el teclado no lo tapa) ---------- */}
+      <FullScreenSheet open={open === 'origin' || open === 'destination'}>{panelFor(sheetField, true)}</FullScreenSheet>
 
-      {/* ---------- Móvil: calendario en hoja inferior ---------- */}
-      <AnimatePresence>
-        {open === 'date' && (
-          <div key="mobile-cal" className="fixed inset-0 z-[90] flex items-end md:hidden">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setOpen(null)}
-              className="absolute inset-0 bg-slate-950/40"
-            />
-            <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', stiffness: 380, damping: 38 }}
-              className="relative w-full rounded-t-[28px] bg-white px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-3 shadow-2xl dark:bg-slate-900"
-            >
-              <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-slate-200 dark:bg-white/10" />
-              <div className="mb-4 flex items-center justify-between">
-                <p className="text-lg font-black tracking-tight text-slate-900 dark:text-white">¿Cuándo viajas?</p>
-                <button
-                  type="button"
-                  onClick={() => setOpen(null)}
-                  aria-label="Cerrar"
-                  className="flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-500 dark:bg-white/10 dark:text-slate-300"
-                >
-                  <X size={17} strokeWidth={2.5} />
-                </button>
-              </div>
-              <CustomCalendar selectedDate={date} minDate={startOfDay(new Date())} onDateSelect={selectDate} />
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-        </>,
-        document.body,
-      )}
+      {/* ---------- Móvil: calendario en hoja inferior (no necesita teclado) ---------- */}
+      <BottomSheet open={open === 'date'} onClose={() => setOpen(null)} title="¿Cuándo viajas?">
+        <div className="px-5 pb-5 pt-3">
+          <CustomCalendar selectedDate={date} minDate={startOfDay(new Date())} onDateSelect={selectDate} />
+        </div>
+      </BottomSheet>
     </div>
   );
 };

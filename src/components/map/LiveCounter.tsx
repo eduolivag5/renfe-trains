@@ -14,7 +14,6 @@ const CATEGORIES = [
   { label: 'Larga y media distancia', color: COLORS.mediaDistancia },
   { label: 'Cercanías', color: COLORS.cercanias },
   { label: 'Rodalies', color: COLORS.rodalies },
-  { label: 'Otros', color: COLORS.otros },
 ] as const;
 
 /** Hora actual con segundos; solo este componente se re-renderiza cada segundo */
@@ -47,9 +46,7 @@ export const LiveCounter: React.FC<LiveCounterProps> = ({ trains }) => {
       const c = getTrainColor(t.tipo);
       byColor.set(c, (byColor.get(c) ?? 0) + 1);
     }
-    return CATEGORIES.map((c) => ({ ...c, count: byColor.get(c.color) ?? 0 })).filter(
-      (c) => c.count > 0 || c.label !== 'Otros',
-    );
+    return CATEGORIES.map((c) => ({ ...c, count: byColor.get(c.color) ?? 0 }));
   }, [trains]);
 
   const total = trains.length;

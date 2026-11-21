@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowUpRight, Layers } from 'lucide-react';
 import { getTrainLogo } from '../../utils/trainUtils';
 import { useReveal } from '../../hooks/useReveal';
+import { Eyebrow } from '../../ui/heading';
+import { HEADING, LEAD } from '../../ui/headingStyles';
 
 /* ------------------------------------------------------------------ */
 /* Mini vistas previas (decorativas, sin datos)                        */
@@ -146,12 +148,9 @@ const AppFeatures = () => {
   return (
     <section className="space-y-8 compact:space-y-6">
       <div className="max-w-2xl space-y-3">
-        <div className="inline-flex items-center gap-2 rounded-full bg-accent-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-accent-600 dark:text-accent-400">
-          <Layers size={14} /> Todo en un sitio
-        </div>
-        <h2 className="text-3xl font-black leading-none tracking-tighter text-slate-900 md:text-4xl lg:leading-[1.1] dark:text-white">
-          Qué puedes hacer aquí
-        </h2>
+        <Eyebrow icon={Layers}>Todo en un sitio</Eyebrow>
+        <h2 className={HEADING.section}>Qué puedes hacer aquí</h2>
+        <p className={LEAD}>Busca horarios, sigue los trenes en el mapa, revisa los avisos y conoce cada tipo de tren.</p>
       </div>
 
       {/* Cuadrícula 2×2 en escritorio: tamaños holgados sin que la sección crezca en alto */}

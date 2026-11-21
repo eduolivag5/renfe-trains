@@ -1,10 +1,7 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { prettyName, type Estacion } from '../../utils/stationUtils';
 
-const FIELD = 'flex w-full flex-col items-start rounded-2xl px-4 py-3 text-left transition-colors';
-const fieldState = (active: boolean) =>
-  active ? 'bg-slate-100 dark:bg-white/[0.06]' : 'hover:bg-slate-50 dark:hover:bg-white/[0.03]';
-const LABEL = 'text-[12px] font-semibold text-slate-400 dark:text-slate-500';
+import { FIELD, LABEL, fieldState } from './fieldStyles';
 
 interface StationFieldProps {
   kind: 'origin' | 'destination';

@@ -17,8 +17,8 @@ interface StationPanelProps {
   mobile?: boolean;
 }
 
-/** Resalta la parte del nombre que coincide con lo escrito */
-const Highlight = ({ text, query }: { text: string; query: string }) => {
+/** Resalta la parte del nombre que coincide con lo escrito (también lo usa el selector de núcleo) */
+export const Highlight =({ text, query }: { text: string; query: string }) => {
   const q = query.trim().toLocaleLowerCase('es');
   const i = q.length >= 2 ? text.toLocaleLowerCase('es').indexOf(q) : -1;
   if (i < 0) return <>{text}</>;
@@ -164,10 +164,11 @@ export const StationPanel = memo(
                   <li key={est.codigo} role="option" aria-selected={isActive} data-index={i}>
                     <button
                       type="button"
-                      onPointerDown={(e) => {
-                        e.preventDefault();
-                        onSelect(est);
-                      }}
+                      // Se elige con un toque completo (click), no al apoyar el dedo: así deslizar
+                      // la lista para hacer scroll no selecciona nada. mousedown sin efecto por
+                      // defecto mantiene el foco en el buscador al hacer clic con el ratón.
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={() => onSelect(est)}
                       onMouseEnter={() => setActive(i)}
                       className={`group flex w-full items-center gap-3 rounded-2xl px-3 py-2.5 text-left transition-colors ${
                         isActive && !mobile ? 'bg-slate-100 dark:bg-white/[0.06]' : 'active:bg-slate-100 dark:active:bg-white/[0.06]'

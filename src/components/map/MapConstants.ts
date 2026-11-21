@@ -6,21 +6,24 @@ export const COLORS = {
   cercanias: '#ef2c30',      // Rojo Cercanías
   rodalies: '#f47216',       // Naranja Rodalies
   altaVelocidad: '#0b3a6e',  // Azul marino · AVE / AVLO / Avant / Alvia / Euromed
-  mediaDistancia: '#808080', // MD / Regional / Intercity
-  otros: '#0d9488',          // Verde azulado · Bus y resto
+  mediaDistancia: '#808080', // Larga y media distancia: Intercity / Regional / MD… y el resto
 } as const;
 
-const ALTA_VELOCIDAD = new Set(['AVE', 'AVE INT', 'AVLO', 'ALVIA', 'AVANT', 'AVANT EXP', 'EUROMED']);
-const MEDIA_DISTANCIA = new Set(['MEDIA_LARGA_DISTANCIA', 'MD','REGIONAL', 'REG.EXP.', 'PROXIMDAD', 'PROXIMIDAD', 'INTERCITY', 'TRENCELTA']);
+/** Marcas de alta velocidad, también dentro de nombres compuestos ("AVE Euromed", "AVANT EXP"…) */
+const ALTA_VELOCIDAD = /\b(AVE|AVLO|AVANT|ALVIA|EUROMED)\b/;
 
-/** Color del marcador según el `tipo` GTFS del tren (mismas agrupaciones que la leyenda) */
+/**
+ * Color del marcador según el `tipo` GTFS del tren (mismas agrupaciones que la leyenda).
+ * Solo hay cuatro grupos: todo tren cae en uno. Lo que no es Cercanías, Rodalies ni alta
+ * velocidad (Intercity, Regional, MD, Proximidad, Trencelta, autobuses de Renfe o cualquier tipo
+ * nuevo que aparezca) va a larga y media distancia.
+ */
 export const getTrainColor = (tipo: string): string => {
   const key = tipo.trim().toUpperCase();
-  if (/^C\d/.test(key)) return COLORS.cercanias;
+  if (/^C\d/.test(key) || key === 'CERCANIAS') return COLORS.cercanias;
   if (isRodalies(key)) return COLORS.rodalies;
-  if (ALTA_VELOCIDAD.has(key)) return COLORS.altaVelocidad;
-  if (MEDIA_DISTANCIA.has(key)) return COLORS.mediaDistancia;
-  return COLORS.otros;
+  if (ALTA_VELOCIDAD.test(key)) return COLORS.altaVelocidad;
+  return COLORS.mediaDistancia;
 };
 
 /** Ciudades de referencia. tier 1 siempre visibles; tier 2 al acercarse. [nombre, lon, lat, tier] */

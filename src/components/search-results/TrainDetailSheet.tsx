@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useDragControls, type PanInfo } from 'framer-motion';
-import { AlertCircle, Clock3, MapPin, X } from 'lucide-react';
+import { AlertCircle, Check, Clock3, MapPin, Share2, X } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { fetchDetail, getCachedDetail } from '../../api/detailCache';
 import type { TrainDetail } from '../../api/trainsService';
 import {
@@ -18,6 +20,7 @@ import {
 } from '../../utils/trainUtils';
 import type { ProcessedTrain } from './TrainCard';
 import { useTrainAlerts } from '../../hooks/useTrainAlerts';
+import { BACKDROP_MOTION, useSheetMotion } from '../../hooks/useSheetMotion';
 import { AlertsButton, AlertsList } from '../alerts/TrainAlerts';
 
 /* ------------------------------------------------------------------ */
@@ -105,10 +108,146 @@ const ItinerarySkeleton = () => (
 );
 
 /* ------------------------------------------------------------------ */
+/* Compartir este tren                                                 */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Copia con un textarea temporal y execCommand('copy'): el único método que funciona fuera de
+ * https. En iOS hay que seleccionar con setSelectionRange (select() no basta) y usar 16 px para
+ * que Safari no haga zoom al enfocarlo.
+ */
+function legacyCopy(value: string): boolean {
+  const ta = document.createElement('textarea');
+  ta.value = value;
+  ta.setAttribute('readonly', '');
+  ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;font-size:16px;pointer-events:none;';
+  document.body.appendChild(ta);
+  ta.focus({ preventScroll: true });
+  ta.setSelectionRange(0, value.length);
+  let ok = false;
+  try {
+    ok = document.execCommand('copy');
+  } catch {
+    ok = false;
+  }
+  ta.remove();
+  return ok;
+}
+
+type ShareInfo ={ date: string; route?: { from: string; to: string } };
+
+/**
+ * Comparte este horario concreto: menú nativo del sistema (móvil) o, si no existe, copia el
+ * enlace. El enlace es la búsqueda con ?tren=… : quien lo abre ve el día y este tren abierto.
+ */
+const ShareTrainButton = ({ train, date, route }: { train: ProcessedTrain } & ShareInfo) => {
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!copied) return;
+    const t = setTimeout(() => setCopied(false), 2000);
+    return () => clearTimeout(t);
+  }, [copied]);
+
+  const share = async () => {
+    const url = new URL(window.location.href);
+    url.searchParams.set('tren', train.tripId);
+    const day = format(parseISO(date), "EEEE d 'de' MMMM", { locale: es });
+    const where = route ? ` de ${route.from} a ${route.to}` : '';
+    const text = `${train.trainType.trim()}${where}: sale a las ${formatClock(train.departureTime)} y llega a las ${formatClock(train.arrivalTime)}, el ${day}`;
+    const link = url.toString();
+
+    // 1) Menú nativo de compartir. Solo existe en páginas seguras (https o localhost): en un
+    //    iPhone abriendo la web por http en la red local, navigator.share no está
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: text, text, url: link });
+        return;
+      } catch (err) {
+        if ((err as DOMException)?.name === 'AbortError') return; // el usuario cerró el menú
+        // otro error (p. ej. NotAllowedError): se copia el enlace
+      }
+    }
+    // 2) Portapapeles moderno (también solo en páginas seguras)
+    if (window.isSecureContext && navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(link);
+        setCopied(true);
+        return;
+      } catch {
+        /* bloqueado: se prueba el método clásico */
+      }
+    }
+    // 3) Copia clásica, que funciona en cualquier página (también http en iOS)
+    if (legacyCopy(link)) setCopied(true);
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={share}
+      onPointerDown={(e) => e.stopPropagation()}
+      aria-label={copied ? 'Enlace copiado' : 'Compartir este tren'}
+      title={copied ? 'Enlace copiado' : 'Compartir este tren'}
+      /* Al copiar, el botón redondo se estira hasta píldora verde con "Enlace copiado" durante 2 s.
+         Todo en CSS y siempre con la misma estructura (nada se monta ni desmonta):
+         - el color de fondo y de texto se funden;
+         - el icono de compartir gira y se encoge mientras el check crece y se "dibuja" (trazo SVG);
+         - el texto se abre con grid-template-columns 0fr → 1fr (el ancho se anima solo, sin medir)
+           y aparece con un fundido un poco después. Con "reducir movimiento", sin animaciones. */
+      className={`flex h-10 shrink-0 items-center rounded-full transition-[background-color,color] duration-300 ease-out active:scale-95 motion-reduce:transition-none ${
+        copied
+          ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-400/10 dark:text-emerald-400'
+          : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-white/[0.08] dark:text-slate-300 dark:hover:bg-white/15'
+      }`}
+    >
+      <span className="relative grid h-10 w-10 shrink-0 place-items-center">
+        <Share2
+          size={17}
+          strokeWidth={2.5}
+          className={`absolute transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
+            copied ? '-rotate-45 scale-50 opacity-0' : 'rotate-0 scale-100 opacity-100'
+          }`}
+        />
+        <Check
+          size={17}
+          strokeWidth={2.75}
+          className={`absolute transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none [&_path]:[stroke-dasharray:24] [&_path]:transition-[stroke-dashoffset] [&_path]:duration-[400ms] [&_path]:ease-out motion-reduce:[&_path]:transition-none ${
+            copied
+              ? 'scale-100 opacity-100 [&_path]:delay-100 [&_path]:[stroke-dashoffset:0]'
+              : 'scale-50 opacity-0 [&_path]:[stroke-dashoffset:24]'
+          }`}
+        />
+      </span>
+      <span
+        aria-hidden
+        className={`grid transition-[grid-template-columns] duration-[400ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
+          copied ? 'grid-cols-[1fr]' : 'grid-cols-[0fr]'
+        }`}
+      >
+        <span className="overflow-hidden">
+          <span
+            className={`block whitespace-nowrap pr-4 text-[13px] font-bold transition-opacity motion-reduce:transition-none ${
+              copied ? 'opacity-100 delay-100 duration-300' : 'opacity-0 duration-150'
+            }`}
+          >
+            Enlace copiado
+          </span>
+        </span>
+      </span>
+      {/* Aviso para lectores de pantalla (el texto visible va oculto para ellos) */}
+      <span className="sr-only" aria-live="polite">
+        {copied ? 'Enlace copiado' : ''}
+      </span>
+    </button>
+  );
+};
+
+/* ------------------------------------------------------------------ */
 /* Panel                                                               */
 /* ------------------------------------------------------------------ */
 
-const Panel = ({ train, onClose }: { train: ProcessedTrain; onClose: () => void }) => {
+const Panel = ({ train, date, route, onClose }: { train: ProcessedTrain; onClose: () => void } & ShareInfo) => {
   const desktop = useIsDesktop();
   const dragControls = useDragControls();
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -158,20 +297,20 @@ const Panel = ({ train, onClose }: { train: ProcessedTrain; onClose: () => void 
     if (info.offset.y > 110 || info.velocity.y > 600) onClose();
   };
 
-  const transition = { duration: 0.45, ease: SHEET_EASE };
+  // PC: panel lateral que entra desde la derecha. Móvil: animación común de los paneles
+  // (fundido + desplazamiento corto, ver useSheetMotion) en vez de subir toda la hoja
+  const sheetMotion = useSheetMotion();
+  const desktopTransition = { duration: 0.45, ease: SHEET_EASE };
   const motionProps = desktop
-    ? { initial: { x: '100%' }, animate: { x: 0 }, exit: { x: '100%' } }
-    : { initial: { y: '100%' }, animate: { y: 0 }, exit: { y: '100%' } };
+    ? { initial: { x: '100%' }, animate: { x: 0, transition: desktopTransition }, exit: { x: '100%', transition: desktopTransition } }
+    : sheetMotion;
 
   return (
     <>
       {/* Fondo atenuado (solo opacidad, sin desenfoque) */}
       <motion.div
         className="fixed inset-0 z-[95] bg-slate-950/45"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.3 }}
+        {...(desktop ? { initial: { opacity: 0 }, animate: { opacity: 1 }, exit: { opacity: 0 }, transition: { duration: 0.3 } } : BACKDROP_MOTION)}
         onClick={onClose}
         aria-hidden
       />
@@ -182,7 +321,6 @@ const Panel = ({ train, onClose }: { train: ProcessedTrain; onClose: () => void 
         aria-label={`Recorrido del ${train.trainType} de las ${formatClock(train.departureTime)}`}
         style={{ '--c': color } as CSSProperties}
         {...motionProps}
-        transition={transition}
         drag={desktop ? false : 'y'}
         dragControls={dragControls}
         dragListener={false}
@@ -227,6 +365,7 @@ const Panel = ({ train, onClose }: { train: ProcessedTrain; onClose: () => void 
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <AlertsButton count={alerts.length} open={alertsOpen} onToggle={() => setAlertsOpen((v) => !v)} />
+              <ShareTrainButton train={train} date={date} route={route} />
               <button
                 ref={closeRef}
                 type="button"
@@ -305,7 +444,10 @@ const Panel = ({ train, onClose }: { train: ProcessedTrain; onClose: () => void 
  * Detalle del trayecto en un panel aparte: hoja inferior en móvil (se cierra arrastrando)
  * y panel lateral en escritorio. Solo anima transform y opacity (GPU).
  */
-const TrainDetailSheet = ({ train, onClose }: { train: ProcessedTrain | null; onClose: () => void }) =>
-  createPortal(<AnimatePresence>{train && <Panel key={train.tripId} train={train} onClose={onClose} />}</AnimatePresence>, document.body);
+const TrainDetailSheet = ({ train, date, route, onClose }: { train: ProcessedTrain | null; onClose: () => void } & ShareInfo) =>
+  createPortal(
+    <AnimatePresence>{train && <Panel key={train.tripId} train={train} date={date} route={route} onClose={onClose} />}</AnimatePresence>,
+    document.body,
+  );
 
 export default TrainDetailSheet;

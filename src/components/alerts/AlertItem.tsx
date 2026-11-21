@@ -1,9 +1,27 @@
 import { memo, useState, type CSSProperties } from 'react';
 import { CalendarClock, Info, TriangleAlert } from 'lucide-react';
 import { cleanAlertText } from '../../api/alertsService';
-import { networkName, relativeTime, type AlertView } from './alertFormat';
+import { networkName, relativeTime, type AlertService, type AlertView } from './alertFormat';
 
 const LONG_TEXT = 240;
+
+/** Símbolos mínimos de servicio (cuadrados): círculo de Cercanías y cuadrado de Rodalies */
+const SERVICE_LOGOS: Record<AlertService, { src: string; alt: string }> = {
+  CERCANIAS: { src: '/new_icons/cercanias_min.svg', alt: 'Cercanías' },
+  RODALIES: { src: '/new_icons/rodalies_min.svg', alt: 'Rodalies' },
+};
+
+export const ServiceLogos = ({ services }: { services: AlertService[] }) =>
+  services.length ? (
+    <span className="flex items-center gap-1">
+      {services.map((s) => {
+        const logo = SERVICE_LOGOS[s];
+        return (
+          <img key={s} src={logo.src} alt={logo.alt} title={logo.alt} loading="lazy" width={16} height={16} className="h-4 w-4 shrink-0" />
+        );
+      })}
+    </span>
+  ) : null;
 
 /** Aviso programado (empieza más adelante) */
 export const ScheduledBadge = () => (
@@ -97,6 +115,7 @@ export const AlertItem = memo(function AlertItem({ view, now, index }: { view: A
       <div className="min-w-0 space-y-2.5">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
           <KindBadge warning={isWarning} />
+          <ServiceLogos services={view.services} />
           <span className="text-[13px] font-bold text-slate-700 dark:text-slate-200">
             {view.networks.map(networkName).join(' · ')}
           </span>

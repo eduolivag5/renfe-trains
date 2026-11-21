@@ -125,6 +125,16 @@ const HeroSection: React.FC = () => {
           <RailLines />
         </div>
 
+        {/* --- LOGO (solo móvil: en escritorio ya está en el rail). Misma altura y tamaño que el
+            botón flotante de avisos de la esquina derecha; se desplaza con la página. --- */}
+        <img
+          src="/logo.svg"
+          alt="Renfe"
+          width={44}
+          height={44}
+          className="absolute left-4 top-[calc(env(safe-area-inset-top)+0.75rem)] h-11 w-11 rounded-[14px] shadow-[0_8px_24px_-12px_rgba(2,33,71,0.45)] ring-1 ring-slate-900/5 md:hidden dark:ring-white/10"
+        />
+
         {/* --- CONTENIDO --- */}
         <div className="mx-auto flex w-full max-w-page flex-1 items-center px-page pb-4 pt-8 md:pb-8 md:pt-16 compact:pb-6 compact:pt-12">
           <div className="grid w-full grid-cols-1 items-center gap-16 lg:grid-cols-[1.15fr_1fr]">

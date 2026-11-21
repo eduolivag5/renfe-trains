@@ -19,7 +19,6 @@ const LEGEND = [
   { label: 'Larga y media distancia', color: COLORS.mediaDistancia },
   { label: 'Cercanías', color: COLORS.cercanias },
   { label: 'Rodalies', color: COLORS.rodalies },
-  { label: 'Otros', color: COLORS.otros },
 ];
 
 const DOT_R = 2.8;
@@ -60,7 +59,7 @@ const circlePath = (x: number, y: number) =>
  *
  * Rendimiento:
  * - La geometría se calcula cuando el navegador está libre (requestIdleCallback), no en el render.
- * - Los ~400 trenes son 5 <path> (uno por color), no 400 <circle>: DOM mínimo y un repintado barato.
+ * - Los ~400 trenes son 4 <path> (uno por color), no 400 <circle>: DOM mínimo y un repintado barato.
  * - Los puntos van en un <svg> propio superpuesto; su aparición es una animación CSS de opacidad
  *   sobre ese elemento, que la GPU compone sin repintar el mapa base.
  */

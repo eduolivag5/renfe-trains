@@ -29,6 +29,21 @@
   --color-accent-950: var(--color-violet-950);
 }
 
+/* --- SIN ZOOM AL ENFOCAR CAMPOS EN MÓVIL ---
+   iOS Safari amplía la página al enfocar un campo de texto con letra de menos de 16px y no la
+   devuelve a su tamaño, lo que descuadra el diseño. En pantallas táctiles todos los campos de
+   texto van a 16px como mínimo. Va fuera de @layer a propósito: así gana a las clases de tamaño
+   (text-sm, text-[15px]…) de cada campo, incluidos los que se añadan en el futuro. En escritorio
+   no cambia nada. No se toca el viewport (maximum-scale=1): eso quitaría también el zoom con
+   los dedos, que hace falta por accesibilidad. */
+@media (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="button"]):not([type="submit"]),
+  select,
+  textarea {
+    font-size: max(16px, 1em);
+  }
+}
+
 @layer base {
   html, body, #root {
     /* Ocupar el 100% real sin scroll elástico molesto */
@@ -256,6 +271,26 @@ html.dark {
 }
 @media (prefers-reduced-motion: reduce) {
   .soft-fade {
+    animation: none;
+  }
+}
+/* --- RESULTADOS DE BÚSQUEDA (/buscar) ---
+   Entrada de las tarjetas en CSS (opacity + transform, en el hilo del compositor) en lugar de una
+   animación de framer-motion por tarjeta. --delay escalona las primeras. */
+@keyframes result-in {
+  from { opacity: 0; transform: translate3d(0, 8px, 0); }
+}
+.result-in {
+  animation: result-in 0.35s cubic-bezier(0.22, 1, 0.36, 1) var(--delay, 0ms) both;
+}
+/* Tarjetas fuera de pantalla: ni se maquetan ni se pintan (listas de Cercanías con 100+ trenes).
+   "auto 150px" reserva su alto aproximado y luego recuerda el real: el scroll no salta */
+.result-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 150px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .result-in {
     animation: none;
   }
 }

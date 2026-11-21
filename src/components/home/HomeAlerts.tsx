@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { ArrowUpRight, MapPinned, TriangleAlert } from 'lucide-react';
 import { KindBadge, ScheduledBadge } from '../alerts/AlertItem';
 import { NETWORK_LIST } from '../alerts/alertFormat';
+import { Eyebrow } from '../../ui/heading';
+import { HEADING, LEAD } from '../../ui/headingStyles';
+import { usePref } from '../../hooks/usePref';
 
 /** Tipos de aviso que hay en /avisos, con la misma insignia que se usa allí */
 const KINDS: { badge: ReactNode; title: string; text: string; warning?: boolean }[] = [
@@ -27,20 +30,24 @@ const KINDS: { badge: ReactNode; title: string; text: string; warning?: boolean 
 /**
  * "Avisos en la red": sección estática (sin llamar a la API ni animaciones) para que la home
  * cargue lo más rápido posible. Explica qué tipos de aviso hay y ofrece un índice de núcleos
- * que abre /avisos ya filtrado; los avisos reales solo se cargan en esa página.
+ * que abre /avisos ya filtrado (el del usuario, si lo eligió en Ajustes, el primero); los avisos
+ * reales solo se cargan en esa página.
  */
-const HomeAlerts = () => (
+const HomeAlerts = () => {
+  // "Mi núcleo" (Ajustes) va el primero del índice y marcado; el resto, en orden alfabético
+  const nucleo = usePref('nucleo');
+  const networks = nucleo
+    ? [...NETWORK_LIST.filter(([c]) => c === nucleo), ...NETWORK_LIST.filter(([c]) => c !== nucleo)]
+    : NETWORK_LIST;
+
+  return (
   <section className="space-y-8 compact:space-y-6">
     {/* Cabecera */}
     <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
       <div className="max-w-2xl space-y-3">
-        <div className="inline-flex items-center gap-2 rounded-full bg-amber-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-amber-700 dark:text-amber-400">
-          <TriangleAlert size={14} /> Avisos
-        </div>
-        <h2 className="text-3xl font-black leading-none tracking-tighter text-slate-900 md:text-4xl lg:leading-[1.1] dark:text-white">
-          Avisos en la red
-        </h2>
-        <p className="text-base leading-relaxed text-slate-500 md:text-lg dark:text-slate-400">
+        <Eyebrow icon={TriangleAlert}>Avisos</Eyebrow>
+        <h2 className={HEADING.section}>Avisos en la red</h2>
+        <p className={LEAD}>
           Incidencias y cambios de servicio publicados para Cercanías y Rodalies.
         </p>
       </div>
@@ -90,7 +97,7 @@ const HomeAlerts = () => (
         </div>
 
         <ol className="grid border-b border-slate-200 sm:grid-cols-2 sm:gap-x-8 xl:grid-cols-3 dark:border-white/10">
-          {NETWORK_LIST.map(([code, name]) => (
+          {networks.map(([code, name]) => (
             <li key={code} className="min-w-0 border-t border-slate-200 dark:border-white/10">
               <Link
                 to={`/avisos?nucleo=${code}`}
@@ -100,6 +107,11 @@ const HomeAlerts = () => (
                   {code}
                 </span>
                 <span className="min-w-0 flex-1 truncate">{name}</span>
+                {code === nucleo && (
+                  <span className="shrink-0 rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.1em] text-amber-700 dark:text-amber-400">
+                    Tu núcleo
+                  </span>
+                )}
                 <ArrowUpRight
                   size={15}
                   strokeWidth={2.5}
@@ -112,10 +124,20 @@ const HomeAlerts = () => (
 
         <p className="mt-4 text-[13px] leading-relaxed text-slate-500 dark:text-slate-400">
           Cada núcleo abre sus avisos ya filtrados, con sus líneas para afinar la búsqueda.
+          {!nucleo && (
+            <>
+              {' '}
+              <Link to="/ajustes" className="font-bold text-amber-700 hover:underline dark:text-amber-400">
+                Elige tu núcleo en Ajustes
+              </Link>{' '}
+              para tenerlo siempre a mano.
+            </>
+          )}
         </p>
       </div>
     </div>
   </section>
-);
+  );
+};
 
 export default HomeAlerts;

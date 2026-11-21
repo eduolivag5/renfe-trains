@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { HelpCircle, Plus } from 'lucide-react';
+import { Eyebrow } from '../../ui/heading';
+import { HEADING, LEAD } from '../../ui/headingStyles';
 
 const FAQS: { q: string; a: string }[] = [
   {
@@ -45,13 +47,9 @@ const TrainFaq = () => {
     <section className="grid gap-10 lg:grid-cols-[minmax(0,22rem)_1fr] lg:gap-20">
       {/* Cabecera (fija al hacer scroll en escritorio) */}
       <div className="space-y-4 lg:sticky lg:top-8 lg:self-start">
-        <div className="inline-flex items-center gap-2 rounded-full bg-accent-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-accent-600 dark:text-accent-400">
-          <HelpCircle size={14} /> Ayuda
-        </div>
-        <h2 className="text-3xl font-black leading-none tracking-tighter text-slate-900 md:text-5xl lg:leading-[1.1] dark:text-white">
-          Preguntas frecuentes
-        </h2>
-        <p className="text-base leading-relaxed text-slate-500 md:text-lg dark:text-slate-400">
+        <Eyebrow icon={HelpCircle}>Ayuda</Eyebrow>
+        <h2 className={HEADING.page}>Preguntas frecuentes</h2>
+        <p className={LEAD}>
           Lo que más se pregunta sobre los tipos de tren y sobre cómo funciona esta web.
         </p>
       </div>

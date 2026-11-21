@@ -16,7 +16,12 @@ import {
   Sun,
   type LucideIcon,
 } from 'lucide-react';
-import { getPref, setPref } from '../utils/preferences';
+import { getPref, removePref, setPref } from '../utils/preferences';
+import { usePref } from '../hooks/usePref';
+import { networkName } from '../components/alerts/alertFormat';
+import NetworkPicker from '../components/settings/NetworkPicker';
+import { Eyebrow } from '../ui/heading';
+import { HEADING, LEAD } from '../ui/headingStyles';
 
 interface SettingsPageProps {
   isDarkMode: boolean;
@@ -174,6 +179,7 @@ const ThemeOption: React.FC<{ dark: boolean; selected: boolean; onSelect: () => 
 const SettingsPage: React.FC<SettingsPageProps> = ({ isDarkMode, toggleTheme, onReset }) => {
   const [showLegend, setShowLegend] = useState(() => getPref('mapLegend') !== 'hidden');
   const [resetDone, setResetDone] = useState(false);
+  const nucleo = usePref('nucleo');
 
   const setTheme = (dark: boolean) => {
     if (dark !== isDarkMode) toggleTheme();
@@ -195,13 +201,9 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ isDarkMode, toggleTheme, on
     <motion.div variants={container} initial="hidden" animate="show" className="space-y-10 pb-12">
       {/* Cabecera */}
       <motion.header variants={item} className="max-w-2xl space-y-4">
-        <div className="inline-flex items-center gap-2 rounded-full bg-accent-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-accent-600 dark:text-accent-400">
-          <Settings size={14} /> Ajustes
-        </div>
-        <h1 className="text-3xl font-black leading-none tracking-tighter text-slate-900 md:text-5xl dark:text-white">
-          Preferencias
-        </h1>
-        <p className="text-base leading-relaxed text-slate-500 md:text-lg dark:text-slate-400">
+        <Eyebrow icon={Settings}>Ajustes</Eyebrow>
+        <h1 className={HEADING.page}>Preferencias</h1>
+        <p className={LEAD}>
           Ajusta cómo se ve la aplicación. No necesitas cuenta: todo se guarda solo en este navegador.
         </p>
       </motion.header>
@@ -217,6 +219,23 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ isDarkMode, toggleTheme, on
         <div role="radiogroup" aria-label="Tema" className={`grid grid-cols-2 gap-3 p-3 ${CARD}`}>
           <ThemeOption dark={false} selected={!isDarkMode} onSelect={() => setTheme(false)} />
           <ThemeOption dark selected={isDarkMode} onSelect={() => setTheme(true)} />
+        </div>
+      </motion.section>
+
+      {/* Avisos */}
+      {/* Sin overflow-hidden en la tarjeta (el popover del selector sale de ella) y por encima de
+          las secciones siguientes */}
+      <motion.section variants={item} className="relative z-20 space-y-3">
+        <div className="px-1">
+          <h2 className="text-[11px] font-black uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Avisos</h2>
+          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+            {nucleo
+              ? `El contador y la página de avisos se centran en ${networkName(nucleo)}.`
+              : 'Elige tu núcleo de Cercanías o Rodalies para ver primero sus avisos.'}
+          </p>
+        </div>
+        <div className={`p-2 ${CARD.replace('overflow-hidden ', '')}`}>
+          <NetworkPicker value={nucleo} onChange={(code) => (code ? setPref('nucleo', code) : removePref('nucleo'))} />
         </div>
       </motion.section>
 
@@ -277,7 +296,7 @@ const SettingsPage: React.FC<SettingsPageProps> = ({ isDarkMode, toggleTheme, on
           Icon={HardDrive}
           tile="bg-slate-500/10 text-slate-600 dark:text-slate-300"
           label="Preferencias locales"
-          description="El tema y la leyenda del mapa se guardan solo en este navegador."
+          description="El tema, la leyenda del mapa, tu núcleo y tus trayectos se guardan solo en este navegador."
         >
           <button
             type="button"

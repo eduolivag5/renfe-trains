@@ -1,9 +1,10 @@
-import { useCallback, useMemo, useState } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import {
   ArrowDownWideNarrow,
   ArrowRight,
+  ChevronDown,
   Clock3,
   ListFilter,
   Moon,
@@ -11,10 +12,15 @@ import {
   Sun,
   Sunrise,
   Sunset,
+  TriangleAlert,
   type LucideIcon,
 } from 'lucide-react';
+import { useAllAlerts } from '../../hooks/useAllAlerts';
+import { alertMatcher, isWarningAlert, type ServiceAlert } from '../../api/alertsService';
+import { AlertsList } from '../alerts/TrainAlerts';
 import { TrainCard, type ProcessedTrain, type TrainStatus } from './TrainCard';
 import TrainDetailSheet from './TrainDetailSheet';
+import TrainSkeleton from './TrainSkeleton';
 import {
   formatDuration,
   getMapTrainInfo,
@@ -91,15 +97,109 @@ const FilterGroup = ({ title, children }: { title: string; children: React.React
 
 interface TrainResultsProps {
   trains: ProcessedTrain[];
+  /** Cargando otro día: se mantienen cabecera y filtros y la lista pasa a esqueleto */
+  loading?: boolean;
   date: string; // yyyy-MM-dd
+  /** Ciudades del trayecto, para el texto al compartir un tren */
+  route?: { from: string; to: string };
   onNextDay: () => void;
 }
 
-export const TrainResults = ({ trains, date, onNextDay }: TrainResultsProps) => {
+/**
+ * Avisos de las líneas del trayecto: franja ámbar sobre los resultados que despliega sus textos.
+ * Cuenta incidencias e información por separado.
+ */
+const RouteAlerts = ({ alerts, lines }: { alerts: ServiceAlert[]; lines: string[] }) => {
+  const [open, setOpen] = useState(false);
+  const warnings = alerts.filter(isWarningAlert).length;
+  const infos = alerts.length - warnings;
+  const parts = [
+    warnings && `${warnings} ${warnings === 1 ? 'incidencia' : 'incidencias'}`,
+    infos && `${infos} ${infos === 1 ? 'aviso informativo' : 'avisos informativos'}`,
+  ].filter(Boolean);
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex w-full items-center gap-3 rounded-2xl border border-amber-500/25 bg-amber-50 px-4 py-3 text-left transition-colors hover:bg-amber-100/70 dark:border-amber-400/20 dark:bg-amber-400/[0.07] dark:hover:bg-amber-400/[0.1]"
+      >
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-amber-500 text-white dark:bg-amber-400 dark:text-amber-950">
+          <TriangleAlert size={17} strokeWidth={2.5} />
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-[14px] font-black tracking-tight text-slate-900 dark:text-white">
+            Avisos en {lines.length === 1 ? 'la línea' : 'las líneas'} {lines.join(', ')}
+          </span>
+          <span className="block text-[12px] font-semibold text-slate-500 dark:text-slate-400">{parts.join(' · ')}</span>
+        </span>
+        <ChevronDown
+          size={18}
+          strokeWidth={2.5}
+          className={`shrink-0 text-amber-700 transition-transform duration-300 dark:text-amber-400 ${open ? 'rotate-180' : ''}`}
+        />
+      </button>
+      <div className="mt-2.5">
+        <AlertsList alerts={alerts} open={open} />
+      </div>
+    </div>
+  );
+};
+
+export const TrainResults = ({ trains, loading = false, date, route, onNextDay }: TrainResultsProps) => {
   const [sort, setSort] = useState<Sort>('departure');
+
+  /* --- Avisos de Cercanías/Rodalies que afectan a estos trenes (hoy o días siguientes) --- */
+  const upcomingDate = date >= format(new Date(), 'yyyy-MM-dd');
+  const { alerts: allAlerts } = useAllAlerts(upcomingDate);
+  const { alertsByTrip, routeAlerts, alertLines } = useMemo(() => {
+    const byTrip = new Map<string, ServiceAlert[]>();
+    const unique = new Map<number, ServiceAlert>();
+    const lines = new Set<string>();
+    if (!upcomingDate || !allAlerts?.length) return { alertsByTrip: byTrip, routeAlerts: [], alertLines: [] };
+    // Los trenes de un trayecto comparten muy pocas líneas: se calcula una vez por núcleo + línea
+    const byLine = new Map<string, ServiceAlert[]>();
+    for (const t of trains) {
+      const key = `${t.tripId.slice(0, 2)}|${typeKey(t.trainType)}`;
+      let found = byLine.get(key);
+      if (!found) {
+        found = allAlerts.filter(alertMatcher({ tripId: t.tripId, tipo: t.trainType }));
+        byLine.set(key, found);
+      }
+      if (!found.length) continue;
+      byTrip.set(t.tripId, found);
+      lines.add(t.trainType.trim());
+      for (const a of found) unique.set(a.id, a);
+    }
+    // Incidencias primero; dentro de cada tipo, las más recientes arriba
+    const sorted = [...unique.values()].sort(
+      (a, b) => Number(isWarningAlert(b)) - Number(isWarningAlert(a)) || b.fechaInicio.localeCompare(a.fechaInicio),
+    );
+    return { alertsByTrip: byTrip, routeAlerts: sorted, alertLines: [...lines].sort() };
+  }, [trains, allAlerts, upcomingDate]);
   // Tren cuyo detalle está abierto en el panel (hoja inferior en móvil, lateral en escritorio)
   const [selected, setSelected] = useState<ProcessedTrain | null>(null);
   const closeDetail = useCallback(() => setSelected(null), []);
+
+  // Enlace compartido de un tren concreto (?tren=tripId): se abre su detalle al llegar y el
+  // parámetro se quita, para que cerrar el panel no lo vuelva a abrir
+  const [searchParams, setSearchParams] = useSearchParams();
+  const sharedTrip = searchParams.get('tren');
+  useEffect(() => {
+    if (!sharedTrip) return;
+    const train = trains.find((t) => t.tripId === sharedTrip);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- abrir una sola vez el tren del enlace
+    if (train) setSelected(train);
+    setSearchParams(
+      (prev) => {
+        prev.delete('tren');
+        return prev;
+      },
+      { replace: true },
+    );
+  }, [sharedTrip, trains, setSearchParams]);
   const [types, setTypes] = useState<Set<string>>(new Set());
   const [periods, setPeriods] = useState<Set<string>>(new Set());
   const [families, setFamilies] = useState<Set<string>>(new Set());
@@ -191,15 +291,10 @@ export const TrainResults = ({ trains, date, onNextDay }: TrainResultsProps) => 
     );
   })();
 
-  const groups =
-    sort === 'departure'
-      ? PERIODS.map((p) => ({ ...p, items: visible.filter((t) => periodOf(t) === p.key) })).filter((g) => g.items.length)
-      : [{ key: 'all', label: '', range: '', Icon: null as LucideIcon | null, from: 0, to: 0, items: visible }];
-
-  let index = 0;
-
   return (
     <div className="space-y-6">
+      {routeAlerts.length > 0 && <RouteAlerts alerts={routeAlerts} lines={alertLines} />}
+
       {/* ---------- Barra: filtros rápidos · filtros · orden ---------- */}
       <div className="space-y-3">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -268,16 +363,21 @@ export const TrainResults = ({ trains, date, onNextDay }: TrainResultsProps) => 
         </div>
 
         {/* ---------- Panel de filtros ---------- */}
-        <AnimatePresence initial={false}>
-          {panelOpen && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: 'auto', opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-              className="overflow-hidden"
-            >
-              <div className="grid gap-6 rounded-3xl border border-slate-200/80 bg-white p-5 md:grid-cols-2 xl:grid-cols-4 dark:border-white/[0.07] dark:bg-slate-900/60">
+        {/* Se despliega con CSS (grid-template-rows + fundido), sin JavaScript por frame. Cerrado
+            queda inerte: ni foco ni lector de pantalla */}
+        <div
+          className={`grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${
+            panelOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+          }`}
+          inert={!panelOpen}
+          aria-hidden={!panelOpen}
+        >
+          <div className="min-h-0 overflow-hidden">
+              <div
+                className={`grid gap-6 rounded-3xl border border-slate-200/80 bg-white p-5 transition-opacity duration-200 md:grid-cols-2 xl:grid-cols-4 dark:border-white/[0.07] dark:bg-slate-900/60 ${
+                  panelOpen ? 'opacity-100' : 'opacity-0'
+                }`}
+              >
                 <FilterGroup title="Hora de salida">
                   {PERIODS.map((p) => (
                     <Chip
@@ -358,13 +458,18 @@ export const TrainResults = ({ trains, date, onNextDay }: TrainResultsProps) => 
                   </button>
                 </div>
               </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+          </div>
+        </div>
       </div>
 
       {/* ---------- Lista ---------- */}
-      {visible.length === 0 ? (
+      {loading ? (
+        <div className="grid gap-2.5 2xl:grid-cols-2">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <TrainSkeleton key={i} />
+          ))}
+        </div>
+      ) : visible.length === 0 ? (
         allGoneToday ? (
           <div className="flex flex-col items-center rounded-3xl border border-dashed border-slate-200 px-6 py-12 text-center dark:border-white/10">
             <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-500 dark:bg-white/[0.06] dark:text-slate-400">
@@ -404,37 +509,23 @@ export const TrainResults = ({ trains, date, onNextDay }: TrainResultsProps) => 
           </div>
         )
       ) : (
-        groups.map((g) => (
-          <section key={g.key} className="space-y-3">
-            {g.Icon && (
-              <div className="flex items-center gap-3 pt-2">
-                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-white dark:bg-white dark:text-slate-900">
-                  <g.Icon size={17} strokeWidth={2.5} />
-                </span>
-                <div className="leading-tight">
-                  <h3 className="text-[15px] font-black tracking-tight text-slate-900 dark:text-white">{g.label}</h3>
-                  <p className="font-mono text-[12px] font-semibold text-slate-400 dark:text-slate-500">{g.range}</p>
-                </div>
-                <span className="ml-1 h-px flex-1 bg-slate-200 dark:bg-white/[0.08]" />
-              </div>
-            )}
-            <div className="grid gap-2.5 2xl:grid-cols-2">
-              {g.items.map((train) => (
-                <TrainCard
-                  key={train.tripId}
-                  train={train}
-                  index={index++}
-                  status={statusById.get(train.tripId) ?? null}
-                  onOpen={setSelected}
-                  active={selected?.tripId === train.tripId}
-                />
-              ))}
-            </div>
-          </section>
-        ))
+        // Lista seguida, sin separar por tramos horarios (se filtran desde "Hora de salida")
+        <div className="grid gap-2.5 2xl:grid-cols-2">
+          {visible.map((train, i) => (
+            <TrainCard
+              key={train.tripId}
+              train={train}
+              index={i}
+              status={statusById.get(train.tripId) ?? null}
+              warning={alertsByTrip.get(train.tripId)?.some(isWarningAlert) ?? false}
+              onOpen={setSelected}
+              active={selected?.tripId === train.tripId}
+            />
+          ))}
+        </div>
       )}
 
-      <TrainDetailSheet train={selected} onClose={closeDetail} />
+      <TrainDetailSheet train={selected} date={date} route={route} onClose={closeDetail} />
     </div>
   );
 };

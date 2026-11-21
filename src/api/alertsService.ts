@@ -61,23 +61,34 @@ const LOCAL_LINE = /^(C|R|T)[A-Z]*\d/i;
  *   el tripId de Cercanías/Rodalies empieza por el código de núcleo ("1019L20869C5" → 10)
  *   y el tipo es la línea ("C5"), igual que en el route_id del aviso ("10T0110C5").
  */
-export async function getAlertsForTrain({ tripId, tipo, routeId }: AlertLookup): Promise<ServiceAlert[]> {
-  if (routeId && GTFS_ROUTE.test(routeId)) return getAlertsByLine(routeId);
-
+export async function getAlertsForTrain(lookup: AlertLookup): Promise<ServiceAlert[]> {
+  if (lookup.routeId && GTFS_ROUTE.test(lookup.routeId)) return getAlertsByLine(lookup.routeId);
   const all = await getAllAlerts();
+  return all.filter(alertMatcher(lookup));
+}
+
+/**
+ * Comprobador "¿este aviso afecta a este tren?" sin pedir nada a la API (para cruzar muchos
+ * trenes con /alertas de una vez, p. ej. en los resultados de búsqueda): mismo núcleo + línea,
+ * o el mismo route_id si se conoce.
+ */
+export function alertMatcher({ tripId, tipo, routeId }: AlertLookup): (a: ServiceAlert) => boolean {
   const line = tipo.trim().toUpperCase();
   const nucleus = /^\d{2}/.test(tripId) ? tripId.slice(0, 2) : null;
   const local = LOCAL_LINE.test(line) && nucleus;
+  if (!local && !routeId) return () => false;
 
-  return all.filter((a) =>
+  return (a) =>
     (a.routeIds ?? []).some((rid) => {
       if (routeId && rid === routeId) return true;
       if (!local) return false;
       const m = rid.match(GTFS_ROUTE);
       return !!m && m[1] === nucleus && m[2].toUpperCase() === line;
-    }),
-  );
+    });
 }
+
+/** Aviso (incidencia) frente a información */
+export const isWarningAlert = (a: ServiceAlert) => a.alertId.startsWith('AVISO');
 
 /** Texto limpio: sin saltos de línea finales ni el "(-)" que añade la fuente */
 export const cleanAlertText = (s: string) => s.replace(/\s*\(-\)\s*$/, '').trim();

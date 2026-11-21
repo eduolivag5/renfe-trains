@@ -1,6 +1,9 @@
 import React from 'react';
 import { motion, AnimatePresence, MotionConfig } from 'framer-motion';
 import { Link, useLocation } from 'react-router-dom';
+import AlertsBell from './AlertsBell';
+import { useBreakpoint } from '../hooks/use-breakpoint';
+import { useTodayWarnings } from '../hooks/useTodayWarnings';
 import { Home, Map, TrainFront, Search, Settings, Sun, Moon, TriangleAlert, type LucideIcon } from 'lucide-react';
 
 interface NavbarProps {
@@ -12,7 +15,7 @@ interface NavLink {
   name: string;
   Icon: LucideIcon;
   href: string;
-  /** Solo en el rail de escritorio (la barra móvil mantiene 5 pestañas; en móvil se llega desde el Home) */
+  /** Solo en el rail de escritorio: en móvil Avisos se abre desde la campana flotante (AlertsBell) */
   desktopOnly?: boolean;
 }
 
@@ -26,6 +29,9 @@ const NAV_LINKS: NavLink[] = [
 ];
 
 const MOBILE_LINKS = NAV_LINKS.filter((l) => !l.desktopOnly);
+
+/** Páginas sin campana: en el mapa taparía los controles de zoom; en avisos ya estás */
+const NO_BELL = ['/mapa', '/avisos'];
 
 /* Ancho del rail lateral en escritorio: 88px (App.tsx lo reserva con md:pl-[88px]) */
 
@@ -47,10 +53,15 @@ const ThemeIcon: React.FC<{ isDarkMode: boolean; size: number }> = ({ isDarkMode
 );
 
 const Navbar: React.FC<NavbarProps> = ({ isDarkMode, toggleTheme }) => {
-  const { pathname } = useLocation();
+  const { pathname, search } = useLocation();
   const activeHref = NAV_LINKS.find((l) => l.href === pathname)?.href ?? null;
-  // En la barra móvil: -1 si la página actual no tiene pestaña (p. ej. /avisos)
+  // En la barra móvil: -1 si la página actual no tiene pestaña (se oculta la cápsula)
   const activeIndex = MOBILE_LINKS.findIndex((l) => l.href === pathname);
+
+  // Contador de incidencias de hoy en el rail (solo en escritorio; en /avisos sobra)
+  const isDesktop = useBreakpoint('md');
+  const { count: todayWarnings } = useTodayWarnings(isDesktop);
+  const showRailCount = todayWarnings > 0 && pathname !== '/avisos';
 
   /** Pulsar la pestaña de la página actual vuelve suavemente arriba */
   const handleClick = (href: string) => {
@@ -94,7 +105,7 @@ const Navbar: React.FC<NavbarProps> = ({ isDarkMode, toggleTheme }) => {
                     to={href}
                     aria-current={isActive ? 'page' : undefined}
                     onClick={() => handleClick(href)}
-                    title={name}
+                    title={href === '/avisos' && showRailCount ? `${name}: ${todayWarnings} hoy` : name}
                     className="group flex w-full flex-col items-center gap-1 rounded-2xl py-1.5 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent-400 rail-short:gap-0.5 rail-short:py-1"
                   >
                     <span className="relative flex h-10 w-12 items-center justify-center rail-short:h-8 rail-tiny:h-9">
@@ -113,6 +124,16 @@ const Navbar: React.FC<NavbarProps> = ({ isDarkMode, toggleTheme }) => {
                           isActive ? 'text-[#002147]' : 'text-white/60 group-hover:text-white'
                         }`}
                       />
+                      {/* Incidencias de hoy (mismo número que el botón de avisos en móvil). Fijo, sin
+                          animación: el rail siempre está a la vista y no debe distraer. */}
+                      {href === '/avisos' && showRailCount && (
+                        <span
+                          aria-hidden
+                          className="absolute -right-0.5 -top-1 z-20 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-amber-400 px-1 text-[10px] font-black tabular-nums leading-none text-amber-950 ring-2 ring-[#002147] dark:ring-[#070d1c]"
+                        >
+                          {todayWarnings}
+                        </span>
+                      )}
                     </span>
                     <span
                       className={`text-[11px] font-bold tracking-tight transition-colors duration-200 rail-short:text-[10px] rail-tiny:sr-only ${
@@ -138,6 +159,11 @@ const Navbar: React.FC<NavbarProps> = ({ isDarkMode, toggleTheme }) => {
           <ThemeIcon isDarkMode={isDarkMode} size={19} />
         </button>
       </aside>
+
+      {/* ---------------- MÓVIL: campana de avisos (arriba a la derecha) ---------------- */}
+      {/* En resultados de búsqueda tampoco: arriba a la derecha van las acciones de la cabecera fija,
+          y la propia página ya avisa de las incidencias de sus líneas */}
+      {!NO_BELL.includes(pathname) && !(pathname === '/buscar' && search.includes('origin=')) && <AlertsBell />}
 
       {/* ---------------- MÓVIL: tab bar integrada en el borde inferior ----------------
           Fondo opaco exactamente del color de la página (igual que <html> y theme-color): Safari

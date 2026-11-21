@@ -2,6 +2,8 @@ import React from 'react';
 import { TrainFront } from 'lucide-react';
 import { useReveal } from '../../hooks/useReveal';
 import { getTrainLogo, TRAIN_FAMILIES } from '../../utils/trainUtils';
+import { Eyebrow } from '../../ui/heading';
+import { HEADING, LEAD } from '../../ui/headingStyles';
 
 interface TrainType {
   logo: string;
@@ -88,10 +90,12 @@ const TrainRow: React.FC<{ train: TrainType; compact?: boolean }> = ({ train, co
   return (
     <li
       ref={ref}
-      className={`grid grid-cols-1 items-center ${
+      // El espacio entre trenes es padding (no margen) para que el separador de la lista quede
+      // centrado entre uno y otro; sin hueco antes del primero ni después del último
+      className={`grid grid-cols-1 items-center first:pt-0 last:pb-0 ${
         compact
-          ? 'gap-2.5' // compacto: imagen arriba y logo + descripción en una línea debajo
-          : 'gap-6 md:grid-cols-[1fr_15rem] md:gap-16 lg:grid-cols-[1fr_17rem] lg:gap-24'
+          ? 'gap-2.5 py-5' // compacto: imagen arriba y logo + descripción en una línea debajo
+          : 'gap-6 py-10 md:grid-cols-[1fr_15rem] md:gap-16 md:py-12 lg:grid-cols-[1fr_17rem] lg:gap-24'
       } ${visible ? 'is-visible' : ''}`}
     >
       {/* Tren: ocupa todo el ancho de la columna, difuminado a la izquierda */}
@@ -111,8 +115,9 @@ const TrainRow: React.FC<{ train: TrainType; compact?: boolean }> = ({ train, co
         />
       </div>
 
-      {/* Logo + descripción */}
-      <div className={`train-caption flex ${compact ? 'items-start gap-3' : 'flex-col gap-2.5'}`}>
+      {/* Logo + descripción. En móvil va encima del tren (primero se lee qué es y luego se ve);
+          desde md vuelve a su sitio: a la derecha en /trenes, debajo en las columnas de la home */}
+      <div className={`train-caption flex max-md:order-first ${compact ? 'items-start gap-3' : 'flex-col gap-2.5'}`}>
         <img
           src={logo.src}
           alt={train.name}
@@ -133,17 +138,9 @@ const TrainFamilies: React.FC<{ compact?: boolean }> = ({ compact = false }) => 
   <section className={compact ? 'space-y-8 compact:space-y-6' : 'space-y-16'}>
     {/* Cabecera */}
     <div className={`max-w-2xl ${compact ? 'space-y-3' : 'space-y-4'}`}>
-      <div className="inline-flex items-center gap-2 rounded-full bg-accent-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-accent-600 dark:text-accent-400">
-        <TrainFront size={14} /> Nuestros trenes
-      </div>
-      <h2
-        className={`text-3xl font-black leading-none tracking-tighter text-slate-900 dark:text-white lg:leading-[1.1] ${
-          compact ? 'md:text-4xl' : 'md:text-5xl'
-        }`}
-      >
-        ¿Cómo funcionan los trenes?
-      </h2>
-      <p className={`text-base leading-relaxed text-slate-500 dark:text-slate-400 ${compact ? 'md:text-lg' : 'md:text-xl'}`}>
+      <Eyebrow icon={TrainFront}>Nuestros trenes</Eyebrow>
+      <h2 className={compact ? HEADING.section : HEADING.page}>¿Cómo funcionan los trenes?</h2>
+      <p className={LEAD}>
         Tres familias de servicios, cada una pensada para un tipo de viaje.
       </p>
     </div>
@@ -178,7 +175,8 @@ const TrainFamilies: React.FC<{ compact?: boolean }> = ({ compact = false }) => 
             </div>
           )}
 
-          <ul className={compact ? 'space-y-5' : 'space-y-10 md:space-y-12'}>
+          {/* Filete fino entre los tipos de tren de la familia (solo entre ellos) */}
+          <ul className="divide-y divide-slate-200/70 dark:divide-white/[0.06]">
             {family.trains.map((train) => (
               <TrainRow key={train.name} train={train} compact={compact} />
             ))}

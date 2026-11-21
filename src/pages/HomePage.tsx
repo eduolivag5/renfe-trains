@@ -6,6 +6,9 @@ import LiveNetwork from '../components/home/LiveNetwork';
 import HomeAlerts from '../components/home/HomeAlerts';
 import AppFeatures from '../components/home/AppFeatures';
 import PopularRoutes from '../components/search-results/PopularRoutes';
+import SavedTrips from '../components/search-results/SavedTrips';
+import { Eyebrow } from '../ui/heading';
+import { HEADING, LEAD } from '../ui/headingStyles';
 
 const HomePage = () => {
   return (
@@ -19,16 +22,14 @@ const HomePage = () => {
           <section className="grid grid-cols-1 items-center gap-8 lg:grid-cols-2 lg:gap-16">
 
             {/* TEXTO: Debajo en móvil con estilo minimalista, normal en PC */}
-            <div className="order-1 space-y-4 px-2 text-left lg:space-y-5 lg:px-0">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-accent-500/10 text-accent-600 dark:text-accent-400 text-[11px] font-bold uppercase tracking-widest">
-                <Search size={14} /> Planificador
-              </div>
+            <div className="order-1 max-w-2xl space-y-3 text-left">
+              <Eyebrow icon={Search}>Planificador</Eyebrow>
 
-              <h2 className="text-3xl font-black leading-none tracking-tighter text-slate-900 md:text-4xl lg:leading-[1.1] dark:text-white">
-                Tu próximo <span className="text-accent-600">trayecto</span>, <br className="hidden lg:block" /> a un click.
+              <h2 className={HEADING.section}>
+                Tu próximo trayecto, <br className="hidden lg:block" /> a un click.
               </h2>
 
-              <p className="max-w-xl text-base leading-relaxed text-slate-500 md:text-lg dark:text-slate-400">
+              <p className={LEAD}>
                 Horarios actualizados y disponibilidad en tiempo real en toda la red nacional.
               </p>
 
@@ -54,6 +55,9 @@ const HomePage = () => {
             </div>
 
           </section>
+
+          {/* TUS TRAYECTOS (favoritos y recientes; solo si hay alguno) */}
+          <SavedTrips />
 
           {/* RUTAS POPULARES */}
           <section className="space-y-4">

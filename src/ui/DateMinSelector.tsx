@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { addDays, differenceInCalendarDays, format, parseISO, startOfDay, subDays } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useBreakpoint } from '../hooks/use-breakpoint';
 
 interface DateSelectorProps {
   date: string; // yyyy-MM-dd
@@ -8,8 +9,9 @@ interface DateSelectorProps {
   onDateChange: (newDate: string) => void;
 }
 
-const VISIBLE = 5;
-const CENTER = Math.floor(VISIBLE / 2);
+/** Días a la vista: 5 en móvil, 7 (una semana) desde md */
+const VISIBLE_MOBILE = 5;
+const VISIBLE_DESKTOP = 7;
 /** Misma curva y duración para la tira y el resaltado: se mueven a la vez */
 const MOTION = 'duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none';
 
@@ -25,7 +27,8 @@ export const DateMinSelector = ({ date, loading, onDateChange }: DateSelectorPro
 
   const total = Math.max(60, selected + 30);
   const days = Array.from({ length: total }, (_, i) => addDays(today, i));
-  const offset = Math.max(0, selected - CENTER);
+  const VISIBLE = useBreakpoint('md') ? VISIBLE_DESKTOP : VISIBLE_MOBILE;
+  const offset = Math.max(0, selected - Math.floor(VISIBLE / 2));
 
   const go = (d: Date) => onDateChange(format(d, 'yyyy-MM-dd'));
 
@@ -50,7 +53,7 @@ export const DateMinSelector = ({ date, loading, onDateChange }: DateSelectorPro
           {/* Resaltado del día elegido (viaja a la vez que la tira) */}
           <span
             aria-hidden
-            className={`absolute left-0 top-0 h-14 px-0.5 transition-transform ${MOTION}`}
+            className={`absolute left-0 top-0 h-12 px-0.5 md:h-14 transition-transform ${MOTION}`}
             style={{ width: `calc(100% / ${VISIBLE})`, transform: `translate3d(${selected * 100}%, 0, 0)` }}
           >
             <span className="block h-full rounded-2xl bg-accent-600 shadow-[0_8px_20px_-8px_rgba(124,58,237,0.9)] dark:bg-accent-500" />
@@ -68,7 +71,7 @@ export const DateMinSelector = ({ date, loading, onDateChange }: DateSelectorPro
                 aria-pressed={isSelected}
                 aria-label={format(d, "EEEE d 'de' MMMM", { locale: es })}
                 style={{ flexBasis: `calc(100% / ${VISIBLE})` }}
-                className={`relative z-10 flex h-14 shrink-0 flex-col items-center justify-center rounded-2xl transition-colors duration-300 ${
+                className={`relative z-10 flex h-12 shrink-0 md:h-14 flex-col items-center justify-center rounded-2xl transition-colors duration-300 ${
                   isSelected
                     ? 'text-white'
                     : 'text-slate-600 hover:bg-slate-100 active:scale-95 dark:text-slate-300 dark:hover:bg-white/[0.06]'
@@ -82,10 +85,10 @@ export const DateMinSelector = ({ date, loading, onDateChange }: DateSelectorPro
                   {i === 0 ? 'Hoy' : format(d, 'EEE', { locale: es }).replace('.', '')}
                 </span>
                 <span className="text-[17px] font-black leading-tight tabular-nums">{format(d, 'd')}</span>
-                {/* Mes siempre reservado en altura: el contenido no salta al seleccionar */}
+                {/* Mes en todos los días */}
                 <span
-                  className={`text-[9px] font-bold uppercase leading-none transition-opacity duration-300 ${
-                    isSelected ? 'text-accent-100 opacity-100' : d.getDate() === 1 ? 'text-slate-400 opacity-100' : 'opacity-0'
+                  className={`text-[9px] font-bold uppercase leading-none transition-colors duration-300 ${
+                    isSelected ? 'text-accent-100' : 'text-slate-400 dark:text-slate-500'
                   }`}
                 >
                   {format(d, 'MMM', { locale: es }).replace('.', '')}

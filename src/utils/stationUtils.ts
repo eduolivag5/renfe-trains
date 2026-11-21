@@ -54,6 +54,7 @@ const ACCENT_FIXES: Record<string, string> = {
   'POL?GONO': 'POLÍGONO',
   'PE?A': 'PEÑA',
   'MU?OZ': 'MUÑOZ',
+  'ESTACI?': 'ESTACIÓ',
 };
 
 const fixWord = (word: string) => ACCENT_FIXES[word.split(BAD).join('?')] ?? word;
@@ -111,3 +112,38 @@ export const POPULAR_ROUTES: { from: Estacion; to: Estacion; city: [string, stri
   { from: byCode('71801'), to: byCode('04040'), city: ['Barcelona', 'Zaragoza'] },
   { from: byCode('17000'), to: byCode('13200'), city: ['Madrid', 'Bilbao'] },
 ];
+
+/* ------------------------------------------------------------------ */
+/* Ciudad y estación para cabeceras ("Madrid" + "Puerta de Atocha")     */
+/* ------------------------------------------------------------------ */
+
+export interface StationPlace {
+  nombre: string;
+  provincia: string;
+  /** Localidad de la estación ("MADRID", "COLLADO VILLALBA"…) */
+  poblacion?: string;
+}
+
+/** Sin tildes ni mayúsculas, para comparar "VALÈNCIA" con "VALENCIA" */
+const fold = (s: string) =>
+  fixEncoding(s)
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase();
+
+/** Ciudad de la estación: su localidad o, si no viene, la provincia */
+export const stationCity = (s: StationPlace) => prettyName(s.poblacion || s.provincia.split('/')[0]);
+
+/**
+ * Nombre de la estación sin la ciudad delante: "Madrid-Puerta de Atocha" → "Puerta de Atocha".
+ * Si el nombre no empieza por la ciudad (o no queda nada), va completo.
+ */
+export const stationShortName = (s: StationPlace) => {
+  const full = prettyName(s.nombre);
+  const city = fold(stationCity(s));
+  const folded = fold(full);
+  if (!folded.startsWith(city)) return full;
+  const rest = full.slice(city.length).replace(/^[\s\-–·,]+/, '').trim();
+  return rest || full;
+};
+

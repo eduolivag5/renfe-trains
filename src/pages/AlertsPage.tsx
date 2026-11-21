@@ -7,7 +7,9 @@ import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { AlertItem, AlertItemSkeleton } from '../components/alerts/AlertItem';
 import { GENERAL_KEY, lineSort, networkName, sortAlertViews, toAlertView, type AlertView } from '../components/alerts/alertFormat';
 import { cleanAlertText } from '../api/alertsService';
-
+import { getPref } from '../utils/preferences';
+import { Eyebrow } from '../ui/heading';
+import { HEADING, LEAD } from '../ui/headingStyles';
 type Kind = 'all' | 'warning' | 'info';
 const KINDS: [Kind, string][] = [
   ['all', 'Todo'],
@@ -176,6 +178,14 @@ const AlertsPage = () => {
       { replace: true },
     );
 
+  // "Mi núcleo" (Ajustes): si se entra a /avisos sin filtros, se abre ya filtrado por él.
+  // Solo al entrar: si luego el usuario elige "Todos", se respeta.
+  useEffect(() => {
+    const mine = getPref('nucleo');
+    if (mine && ![...params.keys()].length) update({ nucleo: mine });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const selectNetwork = (code: string | null) => update({ nucleo: code, lineas: null });
   const toggleLine = (line: string) => {
     const next = selectedLines.includes(line) ? selectedLines.filter((l) => l !== line) : [...selectedLines, line];
@@ -275,23 +285,21 @@ const AlertsPage = () => {
   return (
     // reducedMotion="user": sin desplazamientos si el sistema pide reducir el movimiento
     <MotionConfig reducedMotion="user">
-      <div className="fade-up space-y-12 pb-12">
-        {/* Cabecera */}
-        <header className="max-w-2xl space-y-4">
-          <div className="inline-flex items-center gap-2 rounded-full bg-accent-500/10 px-3 py-1 text-[11px] font-bold uppercase tracking-widest text-accent-600 dark:text-accent-400">
-            <TriangleAlert size={14} /> Avisos
-          </div>
-          <h1 className="text-3xl font-black leading-none tracking-tighter text-slate-900 md:text-5xl dark:text-white">
-            Avisos del servicio
-          </h1>
-          <p className="text-base leading-relaxed text-slate-500 md:text-lg dark:text-slate-400">
-            Incidencias, obras y cambios publicados para Cercanías y Rodalies.
-          </p>
-        </header>
+      <div className="fade-up pb-12">
+        {/* Cabecera. El título no va dentro de un <header> propio: para quedarse fijo arriba al hacer
+            scroll (sticky dentro de <main>) su contenedor tiene que ser la página entera. Lleva el
+            fondo de la página, a todo el ancho, para tapar la lista que pasa por debajo. */}
+        <Eyebrow icon={TriangleAlert}>Avisos</Eyebrow>
+        <h1 className={`sticky top-0 z-20 -mx-[var(--page-gutter)] mt-1 bg-[var(--page-bg)] px-[var(--page-gutter)] py-3 ${HEADING.page}`}>
+          Avisos del servicio
+        </h1>
+        <p className={`max-w-2xl ${LEAD}`}>
+          Incidencias, obras y cambios publicados para Cercanías y Rodalies.
+        </p>
 
-        <div className="grid min-w-0 gap-8 lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-14">
-          {/* ---------- Filtros laterales ---------- */}
-          <aside className="min-w-0 space-y-6 lg:sticky lg:top-6 lg:space-y-10 lg:self-start">
+        <div className="mt-12 grid min-w-0 gap-8 lg:grid-cols-[16rem_minmax(0,1fr)] lg:gap-14">
+          {/* ---------- Filtros laterales (por debajo del título fijo) ---------- */}
+          <aside className="min-w-0 space-y-6 lg:sticky lg:top-24 lg:space-y-10 lg:self-start">
             <h2 className="flex items-center gap-2 text-lg font-black tracking-tight text-slate-900 dark:text-white">
               <SlidersHorizontal size={18} strokeWidth={2.5} className="text-accent-600 dark:text-accent-400" />
               Filtros

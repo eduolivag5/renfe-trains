@@ -40,6 +40,7 @@ export const TRAIN_BRAND_MAP: Record<string, { logo: string; color: string }> = 
 
 export const getTrainIdentity = (type: string) => {
   if (TRAIN_BRAND_MAP[type]) return TRAIN_BRAND_MAP[type];
+  if (type.toUpperCase().includes('EUROMED')) return TRAIN_BRAND_MAP['EUROMED'];
   if (type.startsWith('C')) return { logo: 'CERCANIAS', color: '#e30613' };
   if (/^(R|RT|RG|RL)/.test(type)) return { logo: 'CERCANIAS', color: '#ee7b10' };
   return { logo: 'GENERIC', color: '#002147' };

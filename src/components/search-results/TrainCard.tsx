@@ -1,6 +1,5 @@
 import { type CSSProperties } from 'react';
-import { motion } from 'framer-motion';
-import { ChevronRight, Zap } from 'lucide-react';
+import { ChevronRight, TriangleAlert, Zap } from 'lucide-react';
 import { FALLBACK_LOGO, formatClock, formatDuration, getMapTrainInfo, getTrainIdentity, getTrainLogo, timeToMinutes, trainTypeHint } from '../../utils/trainUtils';
 import { type TrainSearchResult } from '../../api/trainsService';
 import { prefetchDetail } from '../../api/detailCache';
@@ -20,13 +19,15 @@ interface TrainCardProps {
   onOpen: (train: ProcessedTrain) => void;
   /** Tarjeta cuyo detalle está abierto ahora mismo */
   active?: boolean;
+  /** Su línea tiene una incidencia publicada (el detalle muestra el texto) */
+  warning?: boolean;
 }
 
 /**
  * Tarjeta de tren. Al pulsarla abre el detalle del trayecto en un panel aparte.
  * Precarga las paradas al pasar el ratón o al empezar a tocar, así el panel llega con datos.
  */
-export const TrainCard = ({ train, index, status, onOpen, active = false }: TrainCardProps) => {
+export const TrainCard = ({ train, index, status, onOpen, active = false, warning = false }: TrainCardProps) => {
   const logo = getTrainLogo(getTrainIdentity(train.trainType.trim().toUpperCase()).logo);
   const family = getMapTrainInfo(train.trainType).family;
   const color = family?.color ?? '#7c3aed';
@@ -35,12 +36,10 @@ export const TrainCard = ({ train, index, status, onOpen, active = false }: Trai
   const prefetch = () => prefetchDetail(train.tripId);
 
   return (
-    <motion.article
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay: Math.min(index, 10) * 0.03 }}
-      style={{ '--c': color } as CSSProperties}
-      className={`w-full min-w-0 max-w-full overflow-hidden rounded-2xl border bg-white transition-[border-color,box-shadow] duration-300 [contain:layout_paint] dark:bg-slate-900/60 ${
+    <article
+      // Entrada en CSS (.result-in) y sin pintar fuera de pantalla (.result-card): ver index.css
+      style={{ '--c': color, '--delay': `${Math.min(index, 10) * 30}ms` } as CSSProperties}
+      className={`result-in result-card w-full min-w-0 max-w-full overflow-hidden rounded-2xl border bg-white transition-[border-color,box-shadow] duration-300 [contain:layout_paint] dark:bg-slate-900/60 ${
         active
           ? 'border-accent-500 shadow-[0_0_0_3px_rgb(139_92_246/0.15)] dark:border-accent-400'
           : 'border-slate-200/80 hover:border-slate-300 dark:border-white/[0.07] dark:hover:border-white/15'
@@ -72,6 +71,11 @@ export const TrainCard = ({ train, index, status, onOpen, active = false }: Trai
                   <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
                 </span>
                 Próximo
+              </span>
+            )}
+            {warning && !departed && (
+              <span className="flex shrink-0 items-center gap-1 rounded-full bg-amber-500 px-2.5 py-1 text-[11px] font-black text-white dark:bg-amber-400 dark:text-amber-950">
+                <TriangleAlert size={11} strokeWidth={2.75} /> Aviso
               </span>
             )}
             {departed && (
@@ -136,6 +140,6 @@ export const TrainCard = ({ train, index, status, onOpen, active = false }: Trai
           </div>
         </div>
       </button>
-    </motion.article>
+    </article>
   );
 };

@@ -28,15 +28,34 @@ export const NETWORK_LIST = Object.entries(NETWORK_NAMES).sort(([, a], [, b]) =>
 
 export const GENERAL_KEY = 'general';
 
+/** ¿Afecta el aviso al núcleo? (por los route_id de sus líneas) */
+export const alertInNetwork = (alert: ServiceAlert, code: string) =>
+  (alert.routeIds ?? []).some((rid) => rid.match(GTFS_ROUTE)?.[1] === code);
+
 export const networkName = (code: string) =>
   code === GENERAL_KEY ? 'Generales' : (NETWORK_NAMES[code] ?? `Núcleo ${code}`);
 
 const GTFS_ROUTE = /^(\d{2})T\d{4}(.+)$/i;
 
+/** Núcleo de Rodalies de Catalunya: el resto de núcleos son Cercanías */
+export const RODALIES_NETWORK = '51';
+
+export type AlertService = 'CERCANIAS' | 'RODALIES';
+
+/** Servicios a los que afecta el aviso según sus núcleos (vacío si es un aviso general) */
+const servicesOf = (networks: string[]): AlertService[] => {
+  const s: AlertService[] = [];
+  if (networks.some((n) => n !== GENERAL_KEY && n !== RODALIES_NETWORK)) s.push('CERCANIAS');
+  if (networks.includes(RODALIES_NETWORK)) s.push('RODALIES');
+  return s;
+};
+
 export interface AlertView {
   alert: ServiceAlert;
   /** Núcleos afectados (o [GENERAL_KEY] si el aviso no indica líneas) */
   networks: string[];
+  /** Cercanías y/o Rodalies, para mostrar su logo */
+  services: AlertService[];
   /** Líneas únicas y ordenadas: "C1", "R2N"… */
   lines: string[];
   /** Líneas afectadas en cada núcleo ({"10": ["C1", "C10"]}): "C1" de Madrid ≠ "C1" de Sevilla */
@@ -64,9 +83,11 @@ export function toAlertView(alert: ServiceAlert, now = Date.now()): AlertView {
   }
   const d = new Date(alert.fechaInicio);
   const start = Number.isNaN(d.getTime()) ? null : d;
+  const networkList = networks.size ? [...networks].sort() : [GENERAL_KEY];
   return {
     alert,
-    networks: networks.size ? [...networks].sort() : [GENERAL_KEY],
+    networks: networkList,
+    services: servicesOf(networkList),
     lines: [...lines].sort(lineSort),
     linesByNetwork: Object.fromEntries([...byNetwork].map(([n, ls]) => [n, [...ls].sort(lineSort)])),
     start,
