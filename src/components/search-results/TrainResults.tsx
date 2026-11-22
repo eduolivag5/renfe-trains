@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { format } from 'date-fns';
 import {
@@ -21,7 +21,11 @@ import { AlertsList } from '../alerts/TrainAlerts';
 import { TrainCard, type ProcessedTrain, type TrainStatus } from './TrainCard';
 import TrainDetailSheet from './TrainDetailSheet';
 import TrainSkeleton from './TrainSkeleton';
+import { useNow } from '../../hooks/useNow';
+import { useLiveTrains } from '../../hooks/useLiveTrains';
+import { getResultsSort, getRouteFilters, setResultsSort, setRouteFilters, type ResultsSort } from '../../utils/preferences';
 import {
+  formatClock,
   formatDuration,
   getMapTrainInfo,
   getTrainIdentity,
@@ -30,7 +34,15 @@ import {
   TRAIN_FAMILIES,
 } from '../../utils/trainUtils';
 
-type Sort = 'departure' | 'duration';
+type Sort = ResultsSort;
+
+/** Ciudades y estaciones del trayecto (texto al compartir y evento de calendario) */
+export interface RouteInfo {
+  from: string;
+  to: string;
+  fromStation?: string;
+  toStation?: string;
+}
 
 /** Franjas horarias (hora de salida) */
 const PERIODS: { key: string; label: string; range: string; Icon: LucideIcon; from: number; to: number }[] = [
@@ -100,8 +112,10 @@ interface TrainResultsProps {
   /** Cargando otro día: se mantienen cabecera y filtros y la lista pasa a esqueleto */
   loading?: boolean;
   date: string; // yyyy-MM-dd
-  /** Ciudades del trayecto, para el texto al compartir un tren */
-  route?: { from: string; to: string };
+  /** Ciudades y estaciones del trayecto, para compartir un tren o añadirlo al calendario */
+  route?: RouteInfo;
+  /** "origen|destino": el orden y los filtros se recuerdan por trayecto */
+  routeKey: string;
   onNextDay: () => void;
 }
 
@@ -148,8 +162,55 @@ const RouteAlerts = ({ alerts, lines }: { alerts: ServiceAlert[]; lines: string[
   );
 };
 
-export const TrainResults = ({ trains, loading = false, date, route, onNextDay }: TrainResultsProps) => {
-  const [sort, setSort] = useState<Sort>('departure');
+/** "15 trenes · primero 06:20 · último 21:30 · el más rápido 2 h 30 min" */
+const DaySummary = ({ trains }: { trains: ProcessedTrain[] }) => {
+  const byDeparture = [...trains].sort((a, b) => timeToMinutes(a.departureTime) - timeToMinutes(b.departureTime));
+  const fastest = Math.min(...trains.map((t) => t.durationMin));
+  const parts = [
+    `${trains.length} ${trains.length === 1 ? 'tren' : 'trenes'}`,
+    trains.length > 1 && `primero ${formatClock(byDeparture[0].departureTime)}`,
+    trains.length > 1 && `último ${formatClock(byDeparture[byDeparture.length - 1].departureTime)}`,
+    `${trains.length > 1 ? 'el más rápido' : 'duración'} ${formatDuration(fastest)}`,
+  ].filter(Boolean);
+  return (
+    <p className="mb-3 px-1 text-[12px] font-semibold text-slate-500 dark:text-slate-400">
+      {parts.map((p, i) => (
+        <Fragment key={i}>
+          {i > 0 && <span className="mx-1.5 text-slate-300 dark:text-slate-600">·</span>}
+          <span className={i === 0 ? 'font-bold text-slate-700 dark:text-slate-200' : 'tabular-nums'}>{p}</span>
+        </Fragment>
+      ))}
+    </p>
+  );
+};
+
+/** Separador "Ahora · 14:32" entre los trenes que ya han salido y los siguientes */
+const NowMarker = ({ time, ref }: { time: string; ref: React.Ref<HTMLDivElement> }) => (
+  <div ref={ref} className="col-span-full flex scroll-mt-48 items-center gap-3 py-1" role="separator" aria-label={`Ahora, ${time}`}>
+    <span className="flex items-center gap-1.5 rounded-full bg-accent-600 px-2.5 py-1 text-[11px] font-black uppercase tracking-wider text-white dark:bg-accent-500">
+      Ahora <span className="tabular-nums opacity-80">{time}</span>
+    </span>
+    <span className="h-0.5 flex-1 rounded-full bg-accent-500/40" />
+  </div>
+);
+
+export const TrainResults = ({ trains, loading = false, date, route, routeKey, onNextDay }: TrainResultsProps) => {
+  // Orden preferido (uno para todos los trayectos) y filtros de este trayecto: se recuerdan.
+  // El componente se monta de nuevo al cambiar de trayecto (key en la página)
+  const [sort, setSortState] = useState<Sort>(getResultsSort);
+  const setSort = (value: Sort) => {
+    setSortState(value);
+    setResultsSort(value);
+  };
+  const [saved] = useState(() => getRouteFilters(routeKey));
+
+  // Hoy: reloj que avanza solo (cuenta atrás, "ya ha salido") y trenes en circulación
+  const isToday = date === format(new Date(), 'yyyy-MM-dd');
+  const now = useNow(isToday);
+  const live = useLiveTrains(
+    useMemo(() => trains.map((t) => t.tripId), [trains]),
+    isToday && !loading,
+  );
 
   /* --- Avisos de Cercanías/Rodalies que afectan a estos trenes (hoy o días siguientes) --- */
   const upcomingDate = date >= format(new Date(), 'yyyy-MM-dd');
@@ -200,10 +261,15 @@ export const TrainResults = ({ trains, loading = false, date, route, onNextDay }
       { replace: true },
     );
   }, [sharedTrip, trains, setSearchParams]);
-  const [types, setTypes] = useState<Set<string>>(new Set());
-  const [periods, setPeriods] = useState<Set<string>>(new Set());
-  const [families, setFamilies] = useState<Set<string>>(new Set());
-  const [maxDuration, setMaxDuration] = useState<number | null>(null);
+  const [types, setTypes] = useState<Set<string>>(() => new Set(saved?.types));
+  const [periods, setPeriods] = useState<Set<string>>(() => new Set(saved?.periods));
+  const [families, setFamilies] = useState<Set<string>>(() => new Set(saved?.families));
+  const [maxDuration, setMaxDuration] = useState<number | null>(saved?.maxDuration ?? null);
+
+  // Se guardan al cambiar (localStorage es un sistema externo: efecto sin estado)
+  useEffect(() => {
+    setRouteFilters(routeKey, { types: [...types], periods: [...periods], families: [...families], maxDuration });
+  }, [routeKey, types, periods, families, maxDuration]);
   const [showDeparted, setShowDeparted] = useState(false);
   const [panelOpen, setPanelOpen] = useState(false);
 
@@ -240,21 +306,21 @@ export const TrainResults = ({ trains, loading = false, date, route, onNextDay }
   const durationLimit = maxDuration !== null && maxDuration < maxDur ? Math.max(maxDuration, minDur) : null;
 
   /* --- Estado: ya ha salido / próximo (solo si la fecha es hoy) --- */
-  const statusById = useMemo(() => {
+  // Se recalcula cada 30 s con el reloj: un tren pasa a "ha salido" sin recargar
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const { statusById, nextDepartsIn } = useMemo(() => {
     const map = new Map<string, TrainStatus>();
-    if (date !== format(new Date(), 'yyyy-MM-dd')) return map;
-    const now = new Date();
-    const nowMin = now.getHours() * 60 + now.getMinutes();
-    let nextAssigned = false;
+    let departsIn: number | null = null;
+    if (!isToday) return { statusById: map, nextDepartsIn: departsIn };
     for (const t of [...trains].sort((a, b) => timeToMinutes(a.departureTime) - timeToMinutes(b.departureTime))) {
       if (timeToMinutes(t.departureTime) < nowMin) map.set(t.tripId, 'departed');
-      else if (!nextAssigned) {
+      else if (departsIn === null) {
         map.set(t.tripId, 'next');
-        nextAssigned = true;
+        departsIn = timeToMinutes(t.departureTime) - nowMin;
       }
     }
-    return map;
-  }, [trains, date]);
+    return { statusById: map, nextDepartsIn: departsIn };
+  }, [trains, isToday, nowMin]);
 
   const departedCount = [...statusById.values()].filter((s) => s === 'departed').length;
   const allGoneToday = departedCount > 0 && departedCount === trains.length && !showDeparted;
@@ -291,6 +357,18 @@ export const TrainResults = ({ trains, loading = false, date, route, onNextDay }
     );
   })();
 
+  // Línea "Ahora": hoy, ordenando por salida y con los que ya han salido a la vista, justo antes
+  // del primer tren que aún no ha salido (si hay trenes a los dos lados)
+  const nowMarkerId =
+    isToday && sort === 'departure' && showDeparted && visible.some((t) => statusById.get(t.tripId) === 'departed')
+      ? (visible.find((t) => statusById.get(t.tripId) !== 'departed')?.tripId ?? null)
+      : null;
+  // Al mostrar los que ya han salido, la lista baja sola hasta "Ahora" (el próximo tren)
+  const nowRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (showDeparted) nowRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  }, [showDeparted]);
+
   return (
     <div className="space-y-6">
       {routeAlerts.length > 0 && <RouteAlerts alerts={routeAlerts} lines={alertLines} />}
@@ -298,7 +376,8 @@ export const TrainResults = ({ trains, loading = false, date, route, onNextDay }
       {/* ---------- Barra: filtros rápidos · filtros · orden ---------- */}
       <div className="space-y-3">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] md:pb-0 [&::-webkit-scrollbar]:hidden">
+          {/* data-no-swipe: aquí deslizar desplaza los filtros, no cambia de día */}
+          <div data-no-swipe className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] md:pb-0 [&::-webkit-scrollbar]:hidden">
             {/* Tipos de tren (con su logo) */}
             {typeOptions.map(([k, { label }]) => {
               const logo = getTrainLogo(getTrainIdentity(k).logo);
@@ -366,6 +445,7 @@ export const TrainResults = ({ trains, loading = false, date, route, onNextDay }
         {/* Se despliega con CSS (grid-template-rows + fundido), sin JavaScript por frame. Cerrado
             queda inerte: ni foco ni lector de pantalla */}
         <div
+          data-no-swipe
           className={`grid transition-[grid-template-rows] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${
             panelOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
           }`}
@@ -462,6 +542,9 @@ export const TrainResults = ({ trains, loading = false, date, route, onNextDay }
         </div>
       </div>
 
+      {/* ---------- Resumen del día (de los trenes que se ven) ---------- */}
+      {!loading && visible.length > 0 && <DaySummary trains={visible} />}
+
       {/* ---------- Lista ---------- */}
       {loading ? (
         <div className="grid gap-2.5 2xl:grid-cols-2">
@@ -509,23 +592,38 @@ export const TrainResults = ({ trains, loading = false, date, route, onNextDay }
           </div>
         )
       ) : (
-        // Lista seguida, sin separar por tramos horarios (se filtran desde "Hora de salida")
+        // Lista seguida, sin separar por tramos horarios (se filtran desde "Hora de salida").
+        // Hoy, con los que ya han salido a la vista, una línea "Ahora" separa pasado y futuro
         <div className="grid gap-2.5 2xl:grid-cols-2">
-          {visible.map((train, i) => (
-            <TrainCard
-              key={train.tripId}
-              train={train}
-              index={i}
-              status={statusById.get(train.tripId) ?? null}
-              warning={alertsByTrip.get(train.tripId)?.some(isWarningAlert) ?? false}
-              onOpen={setSelected}
-              active={selected?.tripId === train.tripId}
-            />
-          ))}
+          {visible.map((train, i) => {
+            const status = statusById.get(train.tripId) ?? null;
+            const showNow = nowMarkerId === train.tripId;
+            return (
+              <Fragment key={train.tripId}>
+                {showNow && <NowMarker ref={nowRef} time={format(now, 'HH:mm')} />}
+                <TrainCard
+                  train={train}
+                  index={i}
+                  status={status}
+                  departsIn={status === 'next' ? nextDepartsIn : null}
+                  live={live.get(train.tripId)}
+                  warning={alertsByTrip.get(train.tripId)?.some(isWarningAlert) ?? false}
+                  onOpen={setSelected}
+                  active={selected?.tripId === train.tripId}
+                />
+              </Fragment>
+            );
+          })}
         </div>
       )}
 
-      <TrainDetailSheet train={selected} date={date} route={route} onClose={closeDetail} />
+      <TrainDetailSheet
+        train={selected}
+        date={date}
+        route={route}
+        live={selected ? live.get(selected.tripId) : undefined}
+        onClose={closeDetail}
+      />
     </div>
   );
 };

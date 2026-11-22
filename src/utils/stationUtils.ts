@@ -131,8 +131,9 @@ const fold = (s: string) =>
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase();
 
-/** Ciudad de la estación: su localidad o, si no viene, la provincia */
-export const stationCity = (s: StationPlace) => prettyName(s.poblacion || s.provincia.split('/')[0]);
+/** Ciudad de la estación: su localidad o, si no viene, la provincia.
+    Nombres bilingües ("CASTELLÓN DE LA PLANA/CASTELLÓ DE LA PLANA"): se usa el primero */
+export const stationCity = (s: StationPlace) => prettyName((s.poblacion || s.provincia).split('/')[0].trim());
 
 /**
  * Nombre de la estación sin la ciudad delante: "Madrid-Puerta de Atocha" → "Puerta de Atocha".
@@ -142,8 +143,9 @@ export const stationShortName = (s: StationPlace) => {
   const full = prettyName(s.nombre);
   const city = fold(stationCity(s));
   const folded = fold(full);
-  if (!folded.startsWith(city)) return full;
-  const rest = full.slice(city.length).replace(/^[\s\-–·,]+/, '').trim();
-  return rest || full;
+  const rest = folded.startsWith(city) ? full.slice(city.length).replace(/^[\s\-–·,]+/, '').trim() : '';
+  const name = rest || full;
+  // Siempre con la inicial en mayúscula ("de Atocha" → "De Atocha", "l'Hospitalet" → "L'Hospitalet")
+  return name.charAt(0).toLocaleUpperCase('es') + name.slice(1);
 };
 

@@ -28,6 +28,8 @@ export interface SpainMapHandle {
   zoomIn: () => void;
   zoomOut: () => void;
   reset: () => void;
+  /** Centra el mapa en un punto con zoom (p. ej. el tren abierto desde un horario). false si el mapa aún no está listo */
+  focus: (lon: number, lat: number) => boolean;
 }
 
 interface SpainMapProps {
@@ -738,6 +740,18 @@ const SpainMap = forwardRef<SpainMapHandle, SpainMapProps>(({ trains, selectedId
       reset: () => {
         spiderRef.current = null;
         run((z, s) => s.transition().duration(500).call(z.transform, zoomIdentity));
+      },
+      focus: (lon, lat) => {
+        const projection = projectionRef.current;
+        const { w, h } = sizeRef.current;
+        const p = projection?.([lon, lat]);
+        if (!p || !w || !h || !zoomRef.current || !canvasRef.current) return false;
+        const k = Math.min(4, MAX_ZOOM);
+        // En móvil la ficha del tren tapa la mitad de abajo: el tren queda algo más arriba del centro
+        const cy = w >= 768 ? h / 2 : h * 0.38;
+        const t = zoomIdentity.translate(w / 2 - p[0] * k, cy - p[1] * k).scale(k);
+        run((z, s) => s.transition().duration(700).call(z.transform, t));
+        return true;
       },
     };
   }, []);

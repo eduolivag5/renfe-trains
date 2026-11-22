@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type TouchEvent } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { addDays, format, parseISO } from 'date-fns';
+import { addDays, format, parseISO, subDays } from 'date-fns';
 import { ArrowRight, CalendarX2, Search, Sparkles } from 'lucide-react';
-import { trainsService, type TrainSearchResult } from '../api/trainsService';
+import type { TrainSearchResult } from '../api/trainsService';
+import { fetchSearch, getCachedSearch, prefetchSearch, searchKey } from '../api/searchCache';
 import { estacionesService } from '../api/estacionesService';
 import StationSearch from '../components/station-search/StationSearch';
-import { processTrainData } from '../utils/trainUtils';
+import { dedupeTrains, processTrainData } from '../utils/trainUtils';
 import { prettyName, stationCity, type StationPlace } from '../utils/stationUtils';
 import PopularRoutes from '../components/search-results/PopularRoutes';
 import { SearchHeader } from '../components/search-results/SearchHeader';
@@ -19,6 +20,9 @@ import { Eyebrow } from '../ui/heading';
 import { HEADING, LEAD } from '../ui/headingStyles';
 
 type StationDetail = StationPlace;
+
+/** Lista vacía estable (una nueva en cada render rehacería todos los cálculos de la lista) */
+const NO_TRAINS: TrainSearchResult[] = [];
 
 const CARD =
   'rounded-[28px] border border-slate-200/80 bg-white p-1.5 shadow-[0_1px_2px_rgba(2,33,71,0.04),0_24px_48px_-24px_rgba(2,33,71,0.25)] dark:border-white/[0.07] dark:bg-slate-900/70 dark:shadow-none';
@@ -59,8 +63,6 @@ const SearchLanding = () => (
 const SearchResultsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [trains, setTrains] = useState<TrainSearchResult[]>([]);
-  const [loading, setLoading] = useState(true);
   // `key`: par de códigos al que pertenecen los nombres (al cambiar de búsqueda, los anteriores no valen)
   const [stations, setStations] = useState<{ key?: string; origin?: StationDetail; destination?: StationDetail }>({});
   const [editing, setEditing] = useState(false);
@@ -70,23 +72,34 @@ const SearchResultsPage = () => {
   const date = searchParams.get('date');
   const hasParams = !!(origin && destination && date);
 
-  // Trenes del día (se mantiene la lista anterior mientras carga la nueva)
+  /* --- Trenes del día ---
+     Un día ya consultado sale de la caché al instante (sin esqueleto). Si no, se pide y,
+     mientras llega, se sigue mostrando la lista anterior. Con cada día cargado se precarga el
+     siguiente en segundo plano: avanzar de día casi nunca espera a la red. */
+  const key = hasParams ? searchKey(origin, destination, date) : '';
+  const [result, setResult] = useState<{ key: string; trains: TrainSearchResult[] } | null>(null);
+  const cached = key ? getCachedSearch(key) : undefined;
+  const loading = hasParams && !cached && result?.key !== key;
+  const trains = cached ?? result?.trains ?? NO_TRAINS;
+
   useEffect(() => {
     if (!hasParams) return;
+    const prefetchNext = () => prefetchSearch(origin, destination, format(addDays(parseISO(date), 1), 'yyyy-MM-dd'));
+    if (getCachedSearch(searchKey(origin, destination, date))) {
+      prefetchNext();
+      return;
+    }
     let cancelled = false;
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- indicador de carga al cambiar de búsqueda
-    setLoading(true);
-    trainsService
-      .searchTrains(origin, destination, date)
-      .then((newTrains) => {
+    fetchSearch(origin, destination, date)
+      .then((t) => {
         if (cancelled) return;
-        setTrains(newTrains);
+        setResult({ key: searchKey(origin, destination, date), trains: t });
+        prefetchNext();
       })
       .catch((err) => {
         console.error('Error buscando trenes:', err);
-        if (!cancelled) setTrains([]);
-      })
-      .finally(() => !cancelled && setLoading(false));
+        if (!cancelled) setResult({ key: searchKey(origin, destination, date), trains: [] });
+      });
     return () => {
       cancelled = true;
     };
@@ -111,7 +124,8 @@ const SearchResultsPage = () => {
     if (trip) addRecentTrip(trip);
   }, [trip]);
 
-  const processedTrains = useMemo(() => processTrainData(trains) as ProcessedTrain[], [trains]);
+  // Sin trenes repetidos (el GTFS trae a veces el mismo tren dos veces, ver dedupeTrains)
+  const processedTrains = useMemo(() => processTrainData(dedupeTrains(trains)) as ProcessedTrain[], [trains]);
 
   const handleDateChange = (newDate: string) => {
     if (newDate === date) return;
@@ -124,6 +138,27 @@ const SearchResultsPage = () => {
       },
       { replace: true },
     );
+  };
+
+  /* --- Móvil: deslizar a izquierda/derecha sobre la lista cambia de día ---
+     Solo gestos claramente horizontales (60 px y el doble que en vertical, para no confundirlos
+     con el scroll) y nunca dentro de zonas que se desplazan en horizontal (data-no-swipe). */
+  const touch = useRef<{ x: number; y: number } | null>(null);
+  const onTouchStart = (e: TouchEvent) => {
+    const t = e.touches[0];
+    touch.current = (e.target as Element).closest('[data-no-swipe]') || e.touches.length > 1 ? null : { x: t.clientX, y: t.clientY };
+  };
+  const onTouchEnd = (e: TouchEvent) => {
+    const start = touch.current;
+    touch.current = null;
+    if (!start || !date) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy) * 2) return;
+    const current = parseISO(date);
+    if (dx < 0) handleDateChange(format(addDays(current, 1), 'yyyy-MM-dd'));
+    else if (format(current, 'yyyy-MM-dd') > format(new Date(), 'yyyy-MM-dd')) handleDateChange(format(subDays(current, 1), 'yyyy-MM-dd'));
   };
 
   if (!hasParams) return <SearchLanding />;
@@ -170,9 +205,10 @@ const SearchResultsPage = () => {
       </AnimatePresence>
 
       {/* Resultados */}
-      <div
-        className="flex min-w-0 flex-col gap-3"
-      >
+      {/* touch-pan-y: el navegador solo gestiona el scroll vertical; el gesto horizontal es nuestro
+          (cambiar de día) y no dispara el "atrás" del navegador. La fila de filtros, que se desplaza
+          en horizontal, sigue funcionando: es su propio contenedor de scroll */}
+      <div className="flex min-w-0 touch-pan-y flex-col gap-3" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
         {/* Al cambiar de día, TrainResults sigue montado con los trenes anteriores y solo la lista
             pasa a esqueleto: la barra de filtros no desaparece (la lista no sube) y los filtros
             elegidos se conservan. El esqueleto suelto es solo para la primera carga. */}
@@ -180,10 +216,22 @@ const SearchResultsPage = () => {
           <div className="grid gap-2.5 2xl:grid-cols-2">{Array.from({ length: 6 }).map((_, i) => <TrainSkeleton key={i} />)}</div>
         ) : processedTrains.length > 0 ? (
           <TrainResults
+            // Cada trayecto, su propio estado: el orden y los filtros guardados de ese trayecto
+            key={`${origin}|${destination}`}
+            routeKey={`${origin}|${destination}`}
             loading={loading}
             trains={processedTrains}
             date={date!}
-            route={stationsReady ? { from: stationCity(stations.origin!), to: stationCity(stations.destination!) } : undefined}
+            route={
+              stationsReady
+                ? {
+                    from: stationCity(stations.origin!),
+                    to: stationCity(stations.destination!),
+                    fromStation: prettyName(stations.origin!.nombre),
+                    toStation: prettyName(stations.destination!.nombre),
+                  }
+                : undefined
+            }
             onNextDay={() => handleDateChange(nextDay)}
           />
         ) : (

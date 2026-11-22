@@ -1,8 +1,9 @@
 import { type CSSProperties } from 'react';
 import { ChevronRight, TriangleAlert, Zap } from 'lucide-react';
-import { FALLBACK_LOGO, formatClock, formatDuration, getMapTrainInfo, getTrainIdentity, getTrainLogo, timeToMinutes, trainTypeHint } from '../../utils/trainUtils';
+import { FALLBACK_LOGO, formatClock, formatCountdown, formatDelay, formatDuration, getMapTrainInfo, getTrainIdentity, getTrainLogo, timeToMinutes, trainTypeHint } from '../../utils/trainUtils';
 import { type TrainSearchResult } from '../../api/trainsService';
 import { prefetchDetail } from '../../api/detailCache';
+import type { LiveInfo } from '../../hooks/useLiveTrains';
 
 export type TrainStatus = 'departed' | 'next' | null;
 
@@ -21,13 +22,36 @@ interface TrainCardProps {
   active?: boolean;
   /** Su línea tiene una incidencia publicada (el detalle muestra el texto) */
   warning?: boolean;
+  /** Minutos que faltan para que salga (solo el próximo tren de hoy) */
+  departsIn?: number | null;
+  /** Está circulando ahora mismo (mapa en directo), con su retraso */
+  live?: LiveInfo;
 }
+
+/** Píldora "En circulación · +4 min" (verde si va en hora, ámbar con 5 min o más de retraso) */
+export const LiveBadge = ({ live }: { live: LiveInfo }) => {
+  const late = live.delay !== null && live.delay >= 5;
+  return (
+    <span
+      className={`flex shrink-0 items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold ${
+        late ? 'bg-amber-500/10 text-amber-700 dark:text-amber-400' : 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+      }`}
+    >
+      <span className="relative flex h-1.5 w-1.5">
+        <span className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-60 ${late ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+        <span className={`relative inline-flex h-1.5 w-1.5 rounded-full ${late ? 'bg-amber-500' : 'bg-emerald-500'}`} />
+      </span>
+      En circulación
+      {live.delay !== null && <span className="tabular-nums">· {formatDelay(live.delay)}</span>}
+    </span>
+  );
+};
 
 /**
  * Tarjeta de tren. Al pulsarla abre el detalle del trayecto en un panel aparte.
  * Precarga las paradas al pasar el ratón o al empezar a tocar, así el panel llega con datos.
  */
-export const TrainCard = ({ train, index, status, onOpen, active = false, warning = false }: TrainCardProps) => {
+export const TrainCard = ({ train, index, status, onOpen, active = false, warning = false, departsIn = null, live }: TrainCardProps) => {
   const logo = getTrainLogo(getTrainIdentity(train.trainType.trim().toUpperCase()).logo);
   const family = getMapTrainInfo(train.trainType).family;
   const color = family?.color ?? '#7c3aed';
@@ -52,7 +76,7 @@ export const TrainCard = ({ train, index, status, onOpen, active = false, warnin
         onPointerDown={prefetch}
         onFocus={prefetch}
         aria-haspopup="dialog"
-        aria-label={`Ver recorrido del ${train.trainType} de las ${formatClock(train.departureTime)}`}
+        aria-label={`Ver recorrido del ${train.trainType} de las ${formatClock(train.departureTime)}${live ? ', en circulación' : ''}`}
         className="group block w-full px-4 pb-4 pt-3 text-left md:px-5"
       >
         {/* Fila de etiquetas: familia (izquierda) · más rápido (derecha) */}
@@ -64,21 +88,26 @@ export const TrainCard = ({ train, index, status, onOpen, active = false, warnin
                 {family.name}
               </span>
             )}
-            {status === 'next' && (
-              <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
-                <span className="relative flex h-1.5 w-1.5">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
-                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            {live ? (
+              <LiveBadge live={live} />
+            ) : (
+              status === 'next' && (
+                <span className="flex shrink-0 items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-400">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-500 opacity-60" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                  </span>
+                  Próximo
+                  {departsIn !== null && <span className="tabular-nums">· sale {departsIn <= 0 ? 'ya' : `en ${formatCountdown(departsIn)}`}</span>}
                 </span>
-                Próximo
-              </span>
+              )
             )}
             {warning && !departed && (
               <span className="flex shrink-0 items-center gap-1 rounded-full bg-amber-500 px-2.5 py-1 text-[11px] font-black text-white dark:bg-amber-400 dark:text-amber-950">
                 <TriangleAlert size={11} strokeWidth={2.75} /> Aviso
               </span>
             )}
-            {departed && (
+            {departed && !live && (
               <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-500 dark:bg-white/[0.06] dark:text-slate-400">
                 Ha salido
               </span>
@@ -131,7 +160,9 @@ export const TrainCard = ({ train, index, status, onOpen, active = false, warnin
                 <span className="h-0.5 flex-1 bg-[var(--c)] opacity-50 dark:bg-slate-500" />
                 <span className="h-2 w-2 shrink-0 rounded-full bg-[var(--c)] dark:bg-slate-300" />
               </div>
-              <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500">Directo</span>
+              {/* Sin transbordo (la búsqueda solo da trenes directos), pero puede tener paradas: el nº
+                  de paradas va en el detalle */}
+              <span className="text-[11px] font-semibold text-slate-400 dark:text-slate-500">Sin transbordo</span>
             </div>
             <time className="relative text-[26px] font-black leading-none tracking-tight tabular-nums text-slate-900 md:text-[28px] dark:text-white">
               {formatClock(train.arrivalTime)}

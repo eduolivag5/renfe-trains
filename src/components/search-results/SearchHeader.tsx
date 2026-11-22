@@ -19,19 +19,19 @@ interface SearchHeaderProps {
   onEditSearch: () => void;
 }
 
-/* Una parada del billete: ciudad en grande y la estación en pequeño (debajo en móvil, al lado en PC) (con su nombre
+/* Una parada del billete: ciudad en grande y, debajo, la estación en pequeño (con su nombre
    completo al mantener pulsado o pasar el ratón); esqueleto mientras cargan los nombres.
    La ciudad manda: la estación es la que se corta con "…" si no cabe. */
 const Stop = ({ station }: { station?: StationInfo }) =>
   station ? (
-    <span className="flex min-w-0 flex-col md:flex-row md:items-baseline md:gap-3" title={`${stationCity(station)} · ${stationShortName(station)}`}>
-      <span className="truncate text-[17px] font-black leading-[22px] tracking-tight text-slate-900 md:max-w-[75%] md:shrink-0 md:text-2xl md:leading-8 dark:text-white">
+    <span className="flex min-w-0 flex-col" title={`${stationCity(station)} · ${stationShortName(station)}`}>
+      <span className="truncate text-[17px] font-black leading-[22px] tracking-tight text-slate-900 md:text-2xl md:leading-8 dark:text-white">
         {stationCity(station)}
       </span>
       <span className="min-w-0 truncate text-[12px] font-medium leading-4 text-slate-500 md:text-sm md:leading-5 dark:text-slate-400">{stationShortName(station)}</span>
     </span>
   ) : (
-    <span className="flex flex-col gap-1.5 md:flex-row md:items-center md:gap-2" aria-hidden>
+    <span className="flex flex-col gap-1.5" aria-hidden>
       <span className="h-4 w-24 animate-pulse rounded-md bg-slate-200/70 md:h-6 md:w-36 dark:bg-white/[0.06]" />
       <span className="h-3 w-16 animate-pulse rounded bg-slate-200/70 dark:bg-white/[0.06]" />
     </span>
@@ -153,19 +153,22 @@ export const SearchHeader = ({
               ancho; en móvil mide lo mismo que cada botón de la derecha, así quedan alineados */}
           {/* Móvil: cada fila mide 38 px (ciudad 22 + estación 16) y el punto va a la altura de la
               ciudad (centro a 11 px), de ahí top-[11px] y bottom-[27px] de la línea */}
+          {/* Filas: ciudad + estación debajo (móvil 22 + 16 = 38 px; PC 32 + 20 = 52 px). El punto va a
+              la altura de la ciudad (centro a 11 px en móvil y a 16 px en PC) y la línea los une:
+              top = centro del primero, bottom = alto de fila − centro del segundo */}
           <h1 className="relative grid min-w-0 flex-1 grid-cols-[0.625rem_minmax(0,1fr)] gap-x-3 gap-y-1.5">
-            <span aria-hidden className="absolute bottom-[27px] left-[calc(0.3125rem-1px)] top-[11px] border-l-2 border-dashed border-slate-300 md:top-5 md:bottom-5 dark:border-white/15" />
-            <span aria-hidden className="relative flex h-[22px] items-center md:h-10">
+            <span aria-hidden className="absolute bottom-[27px] left-[calc(0.3125rem-1px)] top-[11px] border-l-2 border-dashed border-slate-300 md:bottom-9 md:top-4 dark:border-white/15" />
+            <span aria-hidden className="relative flex h-[22px] items-center md:h-8">
               <span className="h-2.5 w-2.5 rounded-full border-2 border-accent-500 bg-[var(--page-bg)]" />
             </span>
-            <span className="flex min-w-0 items-center md:h-10">
+            <span className="flex min-w-0 items-center">
               <Stop station={originDetail} />
             </span>
             <span className="sr-only"> a </span>
-            <span aria-hidden className="relative flex h-[22px] items-center md:h-10">
+            <span aria-hidden className="relative flex h-[22px] items-center md:h-8">
               <span className="h-2.5 w-2.5 rounded-full bg-accent-500" />
             </span>
-            <span className="flex min-w-0 items-center md:h-10">
+            <span className="flex min-w-0 items-center">
               <Stop station={destinationDetail} />
             </span>
           </h1>

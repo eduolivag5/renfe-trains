@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion, useDragControls, type PanInfo } from 'framer-motion';
-import { AlertCircle, Check, Clock3, MapPin, Share2, X } from 'lucide-react';
+import { AlertCircle, CalendarPlus, Check, Clock3, Map as MapIcon, MapPin, Share2, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { fetchDetail, getCachedDetail } from '../../api/detailCache';
@@ -18,7 +19,10 @@ import {
   trainTypeHint,
   timeToMinutes,
 } from '../../utils/trainUtils';
-import type { ProcessedTrain } from './TrainCard';
+import { LiveBadge, type ProcessedTrain } from './TrainCard';
+import type { RouteInfo } from './TrainResults';
+import type { LiveInfo } from '../../hooks/useLiveTrains';
+import { buildTrainIcs, downloadIcs } from '../../utils/calendarIcs';
 import { useTrainAlerts } from '../../hooks/useTrainAlerts';
 import { BACKDROP_MOTION, useSheetMotion } from '../../hooks/useSheetMotion';
 import { AlertsButton, AlertsList } from '../alerts/TrainAlerts';
@@ -134,7 +138,60 @@ function legacyCopy(value: string): boolean {
   return ok;
 }
 
-type ShareInfo ={ date: string; route?: { from: string; to: string } };
+type ShareInfo = { date: string; route?: RouteInfo; live?: LiveInfo };
+
+/** Enlace a este horario concreto: la búsqueda con ?tren=… (abre el día con este tren abierto) */
+const trainLink = (tripId: string) => {
+  const url = new URL(window.location.href);
+  url.searchParams.set('tren', tripId);
+  return url.toString();
+};
+
+const ACTION =
+  'inline-flex items-center gap-1.5 rounded-full border border-slate-200 px-3 py-1.5 text-[12px] font-bold text-slate-700 transition-colors hover:bg-slate-100 active:scale-95 dark:border-white/10 dark:text-slate-200 dark:hover:bg-white/[0.06]';
+
+/**
+ * Acciones del horario: añadirlo al calendario (.ics con aviso 30 min antes; en el móvil se abre
+ * "Añadir al calendario") y, si está circulando, verlo en el mapa en directo.
+ */
+const TrainActions = ({ train, date, route, live, onClose }: { train: ProcessedTrain; onClose: () => void } & ShareInfo) => {
+  const navigate = useNavigate();
+  const addToCalendar = () => {
+    const ics = buildTrainIcs({
+      trainType: train.trainType,
+      date,
+      departureTime: train.departureTime,
+      arrivalTime: train.arrivalTime,
+      fromCity: route?.from,
+      toCity: route?.to,
+      fromStation: route?.fromStation,
+      toStation: route?.toStation,
+      url: trainLink(train.tripId),
+    });
+    downloadIcs(ics, `tren-${date}-${formatClock(train.departureTime).replace(':', '')}.ics`);
+  };
+
+  return (
+    <div className="mt-3 flex flex-wrap gap-2">
+      <button type="button" onClick={addToCalendar} onPointerDown={(e) => e.stopPropagation()} className={ACTION}>
+        <CalendarPlus size={14} strokeWidth={2.5} /> Añadir al calendario
+      </button>
+      {live && (
+        <button
+          type="button"
+          onClick={() => {
+            onClose();
+            navigate(`/mapa?tren=${encodeURIComponent(live.liveTripId)}`);
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+          className={`${ACTION} border-emerald-500/30 text-emerald-700 hover:bg-emerald-500/10 dark:border-emerald-400/25 dark:text-emerald-400`}
+        >
+          <MapIcon size={14} strokeWidth={2.5} /> Ver en el mapa
+        </button>
+      )}
+    </div>
+  );
+};
 
 /**
  * Comparte este horario concreto: menú nativo del sistema (móvil) o, si no existe, copia el
@@ -150,12 +207,10 @@ const ShareTrainButton = ({ train, date, route }: { train: ProcessedTrain } & Sh
   }, [copied]);
 
   const share = async () => {
-    const url = new URL(window.location.href);
-    url.searchParams.set('tren', train.tripId);
     const day = format(parseISO(date), "EEEE d 'de' MMMM", { locale: es });
     const where = route ? ` de ${route.from} a ${route.to}` : '';
     const text = `${train.trainType.trim()}${where}: sale a las ${formatClock(train.departureTime)} y llega a las ${formatClock(train.arrivalTime)}, el ${day}`;
-    const link = url.toString();
+    const link = trainLink(train.tripId);
 
     // 1) Menú nativo de compartir. Solo existe en páginas seguras (https o localhost): en un
     //    iPhone abriendo la web por http en la red local, navigator.share no está
@@ -247,7 +302,7 @@ const ShareTrainButton = ({ train, date, route }: { train: ProcessedTrain } & Sh
 /* Panel                                                               */
 /* ------------------------------------------------------------------ */
 
-const Panel = ({ train, date, route, onClose }: { train: ProcessedTrain; onClose: () => void } & ShareInfo) => {
+const Panel = ({ train, date, route, live, onClose }: { train: ProcessedTrain; onClose: () => void } & ShareInfo) => {
   const desktop = useIsDesktop();
   const dragControls = useDragControls();
   const closeRef = useRef<HTMLButtonElement>(null);
@@ -342,12 +397,15 @@ const Panel = ({ train, date, route, onClose }: { train: ProcessedTrain; onClose
 
           <div className="flex items-start justify-between gap-3">
             <div className="min-w-0 space-y-2.5">
-              {family && (
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--c)]/10 px-2.5 py-1 text-[11px] font-bold text-[var(--c)] dark:bg-white/[0.06] dark:text-slate-200">
-                  <span className="h-1.5 w-1.5 rounded-full bg-[var(--c)] dark:bg-slate-300" />
-                  {family.name}
-                </span>
-              )}
+              <div className="flex flex-wrap items-center gap-1.5">
+                {family && (
+                  <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--c)]/10 px-2.5 py-1 text-[11px] font-bold text-[var(--c)] dark:bg-white/[0.06] dark:text-slate-200">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[var(--c)] dark:bg-slate-300" />
+                    {family.name}
+                  </span>
+                )}
+                {live && <LiveBadge live={live} />}
+              </div>
               <div className="flex items-center gap-2.5">
                 <img
                   src={logo.src}
@@ -412,9 +470,10 @@ const Panel = ({ train, date, route, onClose }: { train: ProcessedTrain; onClose
               <MapPin size={13} strokeWidth={2.5} /> {detail ? stopsLabel(intermediateStops(detail.itinerary.length)) : "Paradas…"}
             </span>
             <span className="inline-flex items-center rounded-full bg-slate-100 px-3 py-1.5 text-[12px] font-bold text-slate-700 dark:bg-white/[0.06] dark:text-slate-200">
-              Directo
+              Sin transbordo
             </span>
           </div>
+          <TrainActions train={train} date={date} route={route} live={live} onClose={onClose} />
         </header>
 
         {/* Recorrido (desplazable dentro de la hoja) */}
@@ -444,9 +503,11 @@ const Panel = ({ train, date, route, onClose }: { train: ProcessedTrain; onClose
  * Detalle del trayecto en un panel aparte: hoja inferior en móvil (se cierra arrastrando)
  * y panel lateral en escritorio. Solo anima transform y opacity (GPU).
  */
-const TrainDetailSheet = ({ train, date, route, onClose }: { train: ProcessedTrain | null; onClose: () => void } & ShareInfo) =>
+const TrainDetailSheet = ({ train, date, route, live, onClose }: { train: ProcessedTrain | null; onClose: () => void } & ShareInfo) =>
   createPortal(
-    <AnimatePresence>{train && <Panel key={train.tripId} train={train} date={date} route={route} onClose={onClose} />}</AnimatePresence>,
+    <AnimatePresence>
+      {train && <Panel key={train.tripId} train={train} date={date} route={route} live={live} onClose={onClose} />}
+    </AnimatePresence>,
     document.body,
   );
 

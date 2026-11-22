@@ -1,5 +1,6 @@
 // pages/MapsPage.tsx
 import { useState, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { Plus, Minus, Maximize2 } from 'lucide-react';
 import { type TrainMap, trainsService } from '../api/trainsService';
@@ -46,6 +47,35 @@ const MapsPage: React.FC<{ isDarkMode: boolean }> = ({ isDarkMode }) => {
       clearInterval(id);
     };
   }, []);
+
+  // Llegada desde un horario ("Ver en el mapa", /mapa?tren=tripId): en cuanto llegan los trenes,
+  // se abre su ficha y el mapa se centra en él. El parámetro se quita para no repetirlo
+  const [searchParams, setSearchParams] = useSearchParams();
+  const wanted = searchParams.get('tren');
+  const handledRef = useRef<string | null>(null);
+  const focusTimer = useRef<ReturnType<typeof setInterval> | undefined>(undefined);
+  useEffect(() => () => clearInterval(focusTimer.current), []);
+  useEffect(() => {
+    if (!wanted || trenes.length === 0 || handledRef.current === wanted) return;
+    handledRef.current = wanted;
+    const train = trenes.find((t) => t.tripId === wanted);
+    setSearchParams(
+      (prev) => {
+        prev.delete('tren');
+        return prev;
+      },
+      { replace: true },
+    );
+    if (!train) return;
+    setSelectedTren(train);
+    // El mapa (topografía) puede tardar algo más que los trenes: se reintenta unos instantes.
+    // El temporizador va en una ref: quitar ?tren= vuelve a ejecutar el efecto y no debe cortarlo
+    let tries = 0;
+    clearInterval(focusTimer.current);
+    focusTimer.current = setInterval(() => {
+      if (mapRef.current?.focus(train.lon, train.lat) || ++tries > 25) clearInterval(focusTimer.current);
+    }, 120);
+  }, [wanted, trenes, setSearchParams]);
 
   return (
     <div className="relative m-0 h-full w-full border-none p-0">

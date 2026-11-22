@@ -88,6 +88,34 @@ export const getMapTrainInfo = (tipo: string) => {
   };
 };
 
+/**
+ * Quita trenes repetidos. El GTFS de larga distancia trae a veces el mismo tren dos veces con
+ * calendarios distintos ("0312312026-11-20" y "0312322026-11-20": mismo nº de tren 03123, otro
+ * sufijo): mismo tipo, misma salida y misma llegada. Se queda el primero.
+ */
+export const dedupeTrains = <T extends { trainType: string; departureTime: string; arrivalTime: string }>(trains: T[]): T[] => {
+  const seen = new Set<string>();
+  return trains.filter((t) => {
+    const key = `${t.trainType.trim().toUpperCase()}|${t.departureTime}|${t.arrivalTime}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+};
+
+/** tripId de larga distancia: nº de tren (5) + sufijo (1) + fecha de inicio del calendario */
+const LONG_DISTANCE_ID = /^\d{6}\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * ¿Es el mismo tren un resultado de búsqueda y uno del mapa en directo?
+ * - Cercanías/Rodalies: el tripId es idéntico en los dos sitios.
+ * - Larga distancia: el tripId cambia (sufijo y fecha), pero empieza por el nº de tren, que es
+ *   también el vehicleId del mapa.
+ */
+export const isSameTrip = (searchTripId: string, live: { tripId: string; vehicleId: string }) =>
+  searchTripId === live.tripId ||
+  (LONG_DISTANCE_ID.test(searchTripId) && LONG_DISTANCE_ID.test(live.tripId) && searchTripId.slice(0, 5) === live.vehicleId);
+
 export const processTrainData =(trains: any[]) => {
   if (trains.length === 0) return [];
   const withDuration = trains.map(train => {
@@ -108,6 +136,12 @@ export const timeToMinutes = (t: string) => {
   const [h, m] = t.split(':').map(Number);
   return h * 60 + m;
 };
+
+/** Cuenta atrás: 12 → "12 min", 75 → "1 h 15 min" */
+export const formatCountdown = (min: number) => (min < 60 ? `${Math.max(0, min)} min` : formatDuration(min));
+
+/** Retraso legible: 0 → "Puntual", 4 → "+4 min", -1 → "-1 min" */
+export const formatDelay = (delay: number) => (delay === 0 ? 'Puntual' : `${delay > 0 ? '+' : ''}${delay} min`);
 
 /** 197 → "3 h 17 min" */
 export const formatDuration = (min: number) => {
